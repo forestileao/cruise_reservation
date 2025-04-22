@@ -26,7 +26,8 @@ defmodule MsReserva.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:amqp, "~> 4.0"}
+      {:amqp, "~> 4.0"},
+      {:plug_cowboy, "~> 2.5"}
     ]
   end
 end
