@@ -48,8 +48,8 @@ defmodule FrontWeb.ReservaLive.Index do
             <tr>
               <th class="py-3 px-4 text-left">ID</th>
               <th class="py-3 px-4 text-left">Cruzeiro</th>
-              <th class="py-3 px-4 text-left">Navio</th>
               <th class="py-3 px-4 text-left">Data</th>
+              <th class="py-3 px-4 text-left">Valor Total</th>
               <th class="py-3 px-4 text-left">Status</th>
               <th class="py-3 px-4 text-left"></th>
             </tr>
@@ -58,9 +58,9 @@ defmodule FrontWeb.ReservaLive.Index do
             <%= for reserva <- @reservas do %>
               <tr class="hover:bg-gray-50">
                 <td class="py-3 px-4"><%= reserva.id %></td>
-                <td class="py-3 px-4"><%= reserva.cruzeiro %></td>
-                <td class="py-3 px-4"><%= reserva.navio %></td>
-                <td class="py-3 px-4"><%= reserva.data_embarque %></td>
+                <td class="py-3 px-4"><%= reserva.cruzeiro_id %></td>
+                <td class="py-3 px-4"><%= reserva.data_criacao %></td>
+                <td class="py-3 px-4"><%= reserva.valor_total %></td>
                 <td class="py-3 px-4">
                   <%= case reserva.status do %>
                     <% "pendente" -> %>
