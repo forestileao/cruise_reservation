@@ -84,17 +84,17 @@ defmodule MsReserva do
     AMQP.Exchange.declare(canal, @exchange, :direct)
 
     AMQP.Queue.declare(canal, @queue_reserva_criada)
-    AMQP.Queue.declare(canal, @queue_pagamento_aprovado)
+    AMQP.Queue.declare(canal, @queue_pagamento_aprovado <> "_ms_reserva")
     AMQP.Queue.declare(canal, @queue_pagamento_recusado)
     AMQP.Queue.declare(canal, @queue_bilhete_gerado)
 
     # Binding para filas que este MS escuta
-    AMQP.Queue.bind(canal, @queue_pagamento_aprovado, @exchange, routing_key: @queue_pagamento_aprovado)
+    AMQP.Queue.bind(canal, @queue_pagamento_aprovado <> "_ms_reserva", @exchange, routing_key: @queue_pagamento_aprovado)
     AMQP.Queue.bind(canal, @queue_pagamento_recusado, @exchange, routing_key: @queue_pagamento_recusado)
     AMQP.Queue.bind(canal, @queue_bilhete_gerado, @exchange, routing_key: @queue_bilhete_gerado)
 
     # Configurar consumidores
-    AMQP.Basic.consume(canal, @queue_pagamento_aprovado, nil, no_ack: true)
+    AMQP.Basic.consume(canal, @queue_pagamento_aprovado <> "_ms_reserva", nil, no_ack: true)
     AMQP.Basic.consume(canal, @queue_pagamento_recusado, nil, no_ack: true)
     AMQP.Basic.consume(canal, @queue_bilhete_gerado, nil, no_ack: true)
 
@@ -106,9 +106,9 @@ defmodule MsReserva do
     # Filtrar itinerários com base nos parâmetros fornecidos
     itinerarios_filtrados = state.itinerarios
     |> Enum.filter(fn itinerario ->
-      (destino == nil || itinerario.destino == destino) &&
+      (destino == nil || String.downcase(itinerario.destino) =~ String.downcase(destino)) &&
       (data_embarque == nil || Enum.member?(itinerario.datas_disponiveis, data_embarque)) &&
-      (porto_embarque == nil || itinerario.porto_embarque == porto_embarque)
+      (porto_embarque == nil || String.downcase(itinerario.porto_embarque) =~ String.downcase(porto_embarque))
     end)
 
     {:reply, {:ok, itinerarios_filtrados}, state}
@@ -135,7 +135,8 @@ defmodule MsReserva do
           valor_total: valor_total,
           status: "pendente",
           link_pagamento: "https://pagamento.cruzeiros.com/#{reserva_id}",
-          data_criacao: DateTime.utc_now() |> DateTime.to_string()
+          data_criacao: DateTime.utc_now() |> DateTime.to_string(),
+          bilhete: nil
         }
 
         # Adicionar reserva ao estado
@@ -165,6 +166,16 @@ defmodule MsReserva do
     end
   end
 
+  def listar_reservas() do
+    GenServer.call(__MODULE__, {:listar_reservas})
+  end
+
+  @impl true
+  def handle_call({:listar_reservas}, _from, state) do
+    reservas = state.reservas
+    {:reply, {:ok, reservas}, state}
+  end
+
   @impl true
   def handle_cast({:registrar_callback, reserva_id, callback}, state) do
     callbacks = Map.put(state.callbacks, reserva_id, callback)
@@ -174,6 +185,7 @@ defmodule MsReserva do
   # Handlers para mensagens AMQP
   def handle_info({:basic_deliver, payload, %{routing_key: @queue_pagamento_aprovado}}, state) do
     mensagem = JSON.decode!(payload)
+    IO.puts("Mensagem de pagamento aprovado: #{inspect(mensagem)}")
 
     # Verificar assinatura digital (simulado)
     if verificar_assinatura(mensagem, @pagamento_public_key) do
@@ -198,15 +210,14 @@ defmodule MsReserva do
       end
     else
       IO.puts("Assinatura inválida em mensagem de pagamento aprovado")
+      {:noreply, state}
     end
 
-    {:noreply, state}
   end
 
   def handle_info({:basic_deliver, payload, %{routing_key: @queue_pagamento_recusado}}, state) do
     mensagem = JSON.decode!(payload)
 
-    # Verificar assinatura digital (simulado)
     if verificar_assinatura(mensagem, @pagamento_public_key) do
       reserva_id = mensagem["reserva_id"]
 
@@ -229,12 +240,12 @@ defmodule MsReserva do
       end
     else
       IO.puts("Assinatura inválida em mensagem de pagamento recusado")
+      {:noreply, state}
     end
-
-    {:noreply, state}
   end
 
   def handle_info({:basic_deliver, payload, %{routing_key: @queue_bilhete_gerado}}, state) do
+    IO.puts("Recebendo mensagem de bilhete gerado")
     mensagem = JSON.decode!(payload)
     reserva_id = mensagem["reserva_id"]
     bilhete_info = mensagem["bilhete"]
@@ -242,10 +253,13 @@ defmodule MsReserva do
     case Map.get(state.reservas, reserva_id) do
       nil ->
         IO.puts("Bilhete gerado para reserva desconhecida: #{reserva_id}")
+        {:noreply, state}
+
 
       reserva ->
         # Atualizar status da reserva e adicionar informações do bilhete
         reserva_atualizada = %{reserva | status: "bilhete_gerado", bilhete: bilhete_info}
+
         novas_reservas = Map.put(state.reservas, reserva_id, reserva_atualizada)
 
         # Notificar via callback se houver
@@ -256,8 +270,6 @@ defmodule MsReserva do
 
         {:noreply, %{state | reservas: novas_reservas}}
     end
-
-    {:noreply, state}
   end
 
   def handle_info({:basic_consume_ok, %{consumer_tag: _tag}}, state) do

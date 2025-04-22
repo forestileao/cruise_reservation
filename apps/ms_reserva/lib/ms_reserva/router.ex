@@ -26,6 +26,21 @@ defmodule MsReserva.Router do
     send_resp(conn, 201, JSON.encode!(%{reserva: reserva}))
   end
 
+  get "/reservas" do
+    {:ok, reservas} = MsReserva.listar_reservas()
+
+    # Retorna a resposta em JSON
+    send_resp(conn, 200, JSON.encode!(%{reservas: reservas}))
+  end
+
+
+  get "/reservas/:id" do
+    {:ok, status} = MsReserva.obter_status_reserva(conn.path_params["id"])
+
+    # Retorna a resposta em JSON
+    send_resp(conn, 200, JSON.encode!(%{reserva: status}))
+  end
+
   # Rota para lidar com caminhos não encontrados
   match _ do
     send_resp(conn, 404, "Not Found")

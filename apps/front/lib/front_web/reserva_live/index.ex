@@ -4,34 +4,32 @@ defmodule FrontWeb.ReservaLive.Index do
 
   def mount(_params, _session, socket) do
     # Simulando que temos algumas reservas do usuário
-    reservas = [
-      %{
-        id: "res_1234",
-        cruzeiro: "Caribe Mágico",
-        navio: "Estrela do Mar",
-        data_embarque: "2025-06-15",
-        porto_embarque: "Miami",
-        status: "bilhete_gerado"
-      },
-      %{
-        id: "res_5678",
-        cruzeiro: "Mediterrâneo Encantado",
-        navio: "Horizonte Azul",
-        data_embarque: "2025-07-10",
-        porto_embarque: "Barcelona",
-        status: "pagamento_aprovado"
-      },
-      %{
-        id: "res_9012",
-        cruzeiro: "Aventura no Alasca",
-        navio: "Aventura Gelada",
-        data_embarque: "2025-08-30",
-        porto_embarque: "Vancouver",
-        status: "pendente"
-      }
-    ]
+    reservas = get_reservas()
 
     {:ok, assign(socket, page_title: "Minhas Reservas", reservas: reservas)}
+  end
+
+  def get_reservas do
+    {:ok, response} = Tesla.get(client(), "/reservas")
+    {:ok, reservas} = JSON.decode(response.body)
+    reservas
+    |> Map.get("reservas")
+    |> Enum.map(fn {id, reserva} ->
+      %{
+        id: id,
+        cruzeiro: reserva["cruzeiro"],
+        navio: reserva["navio"],
+        data_embarque: reserva["data_embarque"],
+        status: reserva["status"]
+      }
+    end)
+  end
+
+  def client do
+    Tesla.client([
+      {Tesla.Middleware.BaseUrl, "http://localhost:4001"},
+      Tesla.Middleware.JSON
+    ])
   end
 
   def render(assigns) do

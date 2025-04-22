@@ -58,6 +58,7 @@ defmodule MsBilhete do
   @impl true
   def handle_info({:basic_deliver, payload, %{routing_key: @queue_pagamento_aprovado}}, state) do
     mensagem = JSON.decode!(payload)
+    IO.puts("Mensagem de pagamento aprovado: #{inspect(mensagem)}")
 
     # Verificar assinatura digital
     if verificar_assinatura(mensagem, @pagamento_public_key) do

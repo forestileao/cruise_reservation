@@ -58,7 +58,7 @@ defmodule MsPagamento do
     valor_total = mensagem["valor_total"]
 
     # Simular processamento de pagamento (aprovação aleatória)
-    pagamento_aprovado = :rand.uniform(100) > 20  # 80% de chance de aprovação
+    pagamento_aprovado = :rand.uniform(100) > 50  # 80% de chance de aprovação
 
     # Criar registro de pagamento
     pagamento = %{
