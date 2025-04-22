@@ -2,20 +2,20 @@ defmodule MsReserva do
   use GenServer
   use AMQP
 
-  # Definições das filas
+
   @exchange "cruzeiros"
   @queue_reserva_criada "reserva-criada"
   @queue_pagamento_aprovado "pagamento-aprovado"
   @queue_pagamento_recusado "pagamento-recusado"
   @queue_bilhete_gerado "bilhete-gerado"
 
-  # Chave pública do MS Pagamento (simulada para o exemplo)
+
   @pagamento_public_key "pagamento_public_key_simulada"
 
-  # Estado inicial do GenServer
+
   defstruct reservas: %{}, itinerarios: [], conexao: nil, canal: nil, callbacks: %{}
 
-  # API pública
+
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, %__MODULE__{}, name: __MODULE__)
   end
@@ -36,10 +36,10 @@ defmodule MsReserva do
     GenServer.cast(__MODULE__, {:registrar_callback, reserva_id, callback})
   end
 
-  # Callbacks do GenServer
+
   @impl true
   def init(state) do
-    # Inicializa os itinerários disponíveis
+
     itinerarios = [
       %{
         id: "c1",
@@ -76,11 +76,11 @@ defmodule MsReserva do
       }
     ]
 
-    # Conectar ao RabbitMQ e configurar canais
+
     {:ok, conexao} = AMQP.Connection.open()
     {:ok, canal} = AMQP.Channel.open(conexao)
 
-    # Declarar exchange e filas
+
     AMQP.Exchange.declare(canal, @exchange, :direct)
 
     AMQP.Queue.declare(canal, @queue_reserva_criada)
@@ -88,12 +88,12 @@ defmodule MsReserva do
     AMQP.Queue.declare(canal, @queue_pagamento_recusado)
     AMQP.Queue.declare(canal, @queue_bilhete_gerado)
 
-    # Binding para filas que este MS escuta
+
     AMQP.Queue.bind(canal, @queue_pagamento_aprovado <> "_ms_reserva", @exchange, routing_key: @queue_pagamento_aprovado)
     AMQP.Queue.bind(canal, @queue_pagamento_recusado, @exchange, routing_key: @queue_pagamento_recusado)
     AMQP.Queue.bind(canal, @queue_bilhete_gerado, @exchange, routing_key: @queue_bilhete_gerado)
 
-    # Configurar consumidores
+
     AMQP.Basic.consume(canal, @queue_pagamento_aprovado <> "_ms_reserva", nil, no_ack: true)
     AMQP.Basic.consume(canal, @queue_pagamento_recusado, nil, no_ack: true)
     AMQP.Basic.consume(canal, @queue_bilhete_gerado, nil, no_ack: true)
@@ -103,7 +103,7 @@ defmodule MsReserva do
 
   @impl true
   def handle_call({:consultar_itinerarios, destino, data_embarque, porto_embarque}, _from, state) do
-    # Filtrar itinerários com base nos parâmetros fornecidos
+
     itinerarios_filtrados = state.itinerarios
     |> Enum.filter(fn itinerario ->
       (destino == nil || String.downcase(itinerario.destino) =~ String.downcase(destino)) &&
@@ -116,13 +116,13 @@ defmodule MsReserva do
 
   @impl true
   def handle_call({:efetuar_reserva, cruzeiro_id, data_embarque, num_passageiros, num_cabines}, _from, state) do
-    # Verificar se o cruzeiro existe
+
     case Enum.find(state.itinerarios, fn i -> i.id == cruzeiro_id end) do
       nil ->
         {:reply, {:erro, "Cruzeiro não encontrado"}, state}
 
       itinerario ->
-        # Criar nova reserva
+
         reserva_id = "res_#{:rand.uniform(10000)}"
         valor_total = itinerario.valor_por_pessoa * num_passageiros
 
@@ -139,10 +139,10 @@ defmodule MsReserva do
           bilhete: nil
         }
 
-        # Adicionar reserva ao estado
+
         novas_reservas = Map.put(state.reservas, reserva_id, nova_reserva)
 
-        # Publicar mensagem na fila de reservas criadas
+
         mensagem = JSON.encode!(%{
           reserva_id: reserva_id,
           valor_total: valor_total,
@@ -182,12 +182,12 @@ defmodule MsReserva do
     {:noreply, %{state | callbacks: callbacks}}
   end
 
-  # Handlers para mensagens AMQP
+
   def handle_info({:basic_deliver, payload, %{routing_key: @queue_pagamento_aprovado}}, state) do
     mensagem = JSON.decode!(payload)
     IO.puts("Mensagem de pagamento aprovado: #{inspect(mensagem)}")
 
-    # Verificar assinatura digital (simulado)
+
     if verificar_assinatura(mensagem, @pagamento_public_key) do
       reserva_id = mensagem["reserva_id"]
 
@@ -196,11 +196,11 @@ defmodule MsReserva do
           IO.puts("Pagamento aprovado para reserva desconhecida: #{reserva_id}")
 
         reserva ->
-          # Atualizar status da reserva
+
           reserva_atualizada = %{reserva | status: "pagamento_aprovado"}
           novas_reservas = Map.put(state.reservas, reserva_id, reserva_atualizada)
 
-          # Notificar via callback se houver
+
           case Map.get(state.callbacks, reserva_id) do
             nil -> :ok
             callback -> callback.("pagamento_aprovado")
@@ -226,11 +226,11 @@ defmodule MsReserva do
           IO.puts("Pagamento recusado para reserva desconhecida: #{reserva_id}")
 
         reserva ->
-          # Atualizar status da reserva para cancelada
+
           reserva_atualizada = %{reserva | status: "cancelada"}
           novas_reservas = Map.put(state.reservas, reserva_id, reserva_atualizada)
 
-          # Notificar via callback se houver
+
           case Map.get(state.callbacks, reserva_id) do
             nil -> :ok
             callback -> callback.("pagamento_recusado")
@@ -257,12 +257,12 @@ defmodule MsReserva do
 
 
       reserva ->
-        # Atualizar status da reserva e adicionar informações do bilhete
+
         reserva_atualizada = %{reserva | status: "bilhete_gerado", bilhete: bilhete_info}
 
         novas_reservas = Map.put(state.reservas, reserva_id, reserva_atualizada)
 
-        # Notificar via callback se houver
+
         case Map.get(state.callbacks, reserva_id) do
           nil -> :ok
           callback -> callback.("bilhete_gerado")
@@ -276,7 +276,7 @@ defmodule MsReserva do
     {:noreply, state}
   end
 
-  # Função helper para simular verificação de assinatura digital
+
   defp verificar_assinatura(mensagem, chave_publica) do
     assinatura = mensagem["assinatura"]
     true
@@ -284,7 +284,7 @@ defmodule MsReserva do
 
   @impl true
   def terminate(_reason, state) do
-    # Fechar conexão com RabbitMQ
+
     AMQP.Connection.close(state.conexao)
     :ok
   end
