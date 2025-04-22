@@ -8,12 +8,12 @@ defmodule MsPagamento.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: MsPagamento.Worker.start_link(arg)
-      # {MsPagamento.Worker, arg}
+      {
+        MsPagamento,
+        []
+      },
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: MsPagamento.Supervisor]
     Supervisor.start_link(children, opts)
   end

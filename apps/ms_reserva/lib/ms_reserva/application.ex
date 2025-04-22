@@ -8,8 +8,10 @@ defmodule MsReserva.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: MsReserva.Worker.start_link(arg)
-      # {MsReserva.Worker, arg}
+      {
+        MsReserva,
+        []
+      },
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
