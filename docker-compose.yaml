@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  # front:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: front_app
+  #   ports:
+  #     - "4000:4000"
+  #   volumes:
+  #     - ./apps/front:/app/apps/front
+  #     - ./config:/app/config
+  #   environment:
+  #     MIX_ENV: dev
+  #     DATABASE_URL: "ecto://postgres:postgres@db/front_dev"
+  #     RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672"
+  #   depends_on:
+  #     - rabbitmq
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest

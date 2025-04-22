@@ -1,6 +1,7 @@
 defmodule FrontWeb.Router do
   use FrontWeb, :router
 
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -10,14 +11,14 @@ defmodule FrontWeb.Router do
     plug :put_secure_browser_headers
   end
 
-  pipeline :api do
-    plug :accepts, ["json"]
-  end
-
   scope "/", FrontWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", HomeLive
+    live "/reservas", ReservaLive.Index
+    live "/reservas/nova", ReservaLive.New
+    live "/reservas/:id", ReservaLive.Show
+    live "/assinante", AssinanteLive
   end
 
   # Other scopes may use custom stacks.
