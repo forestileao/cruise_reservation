@@ -146,7 +146,6 @@ defmodule MsMarketing do
     IO.puts("Promoção aleatória publicada: #{nova_promocao.titulo}")
 
     # Agendar próxima publicação
-    # Agendar próxima publicação
     Process.send_after(self(), :publicar_promocao_aleatoria, 30_000)
 
     {:noreply, estado_atualizado}
@@ -165,8 +164,13 @@ defmodule MsMarketing do
       "validade" => promocao.validade
     }
 
-    AMQP.Basic.publish(state.canal, @exchange_promocoes, fila_destino, Jason.encode!(mensagem))
+    AMQP.Basic.publish(state.canal, @exchange_promocoes, fila_destino, JSON.encode!(mensagem))
     IO.puts("Promoção publicada para #{promocao.destino}: #{promocao.titulo}")
+  end
+
+  @impl true
+  def handle_info({:basic_consume_ok, %{consumer_tag: _tag}}, state) do
+    {:noreply, state}
   end
 
   @impl true

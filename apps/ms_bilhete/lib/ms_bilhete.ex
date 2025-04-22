@@ -57,7 +57,7 @@ defmodule MsBilhete do
 
   @impl true
   def handle_info({:basic_deliver, payload, %{routing_key: @queue_pagamento_aprovado}}, state) do
-    mensagem = Jason.decode!(payload)
+    mensagem = JSON.decode!(payload)
 
     # Verificar assinatura digital
     if verificar_assinatura(mensagem, @pagamento_public_key) do
@@ -87,7 +87,7 @@ defmodule MsBilhete do
         }
       }
 
-      AMQP.Basic.publish(state.canal, @exchange, @queue_bilhete_gerado, Jason.encode!(mensagem_bilhete))
+      AMQP.Basic.publish(state.canal, @exchange, @queue_bilhete_gerado, JSON.encode!(mensagem_bilhete))
 
       IO.puts("Bilhete gerado para reserva #{reserva_id}: #{bilhete.codigo_verificacao}")
 
@@ -96,6 +96,11 @@ defmodule MsBilhete do
       IO.puts("Assinatura inválida em mensagem de pagamento aprovado")
       {:noreply, state}
     end
+  end
+
+  @impl true
+  def handle_info({:basic_consume_ok, %{consumer_tag: _tag}}, state) do
+    {:noreply, state}
   end
 
   # Função helper para simular verificação de assinatura digital

@@ -260,6 +260,10 @@ defmodule MsReserva do
     {:noreply, state}
   end
 
+  def handle_info({:basic_consume_ok, %{consumer_tag: _tag}}, state) do
+    {:noreply, state}
+  end
+
   # Função helper para simular verificação de assinatura digital
   defp verificar_assinatura(mensagem, chave_publica) do
     # Simulação de verificação de assinatura

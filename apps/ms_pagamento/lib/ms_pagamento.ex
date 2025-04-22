@@ -53,7 +53,7 @@ defmodule MsPagamento do
 
   # Handlers para mensagens AMQP
   def handle_info({:basic_deliver, payload, %{routing_key: @queue_reserva_criada}}, state) do
-    mensagem = Jason.decode!(payload)
+    mensagem = JSON.decode!(payload)
     reserva_id = mensagem["reserva_id"]
     valor_total = mensagem["valor_total"]
 
@@ -84,11 +84,15 @@ defmodule MsPagamento do
     mensagem_assinada = Map.put(mensagem_base, "assinatura", assinar_mensagem(mensagem_base, @private_key))
 
     fila_destino = if pagamento_aprovado, do: @queue_pagamento_aprovado, else: @queue_pagamento_recusado
-    AMQP.Basic.publish(state.canal, @exchange, fila_destino, Jason.encode!(mensagem_assinada))
+    AMQP.Basic.publish(state.canal, @exchange, fila_destino, JSON.encode!(mensagem_assinada))
 
     IO.puts("Pagamento #{pagamento.status} para reserva #{reserva_id}, valor: #{valor_total}")
 
     {:noreply, %{state | pagamentos: novos_pagamentos}}
+  end
+
+  def handle_info({:basic_consume_ok, %{consumer_tag: _tag}}, state) do
+    {:noreply, state}
   end
 
   defp assinar_mensagem(mensagem, chave_privada) do
