@@ -266,10 +266,8 @@ defmodule MsReserva do
 
   # Função helper para simular verificação de assinatura digital
   defp verificar_assinatura(mensagem, chave_publica) do
-    # Simulação de verificação de assinatura
-    # Em um ambiente real, isso usaria criptografia de chave pública
     assinatura = mensagem["assinatura"]
-    true # Simulando sucesso na verificação
+    true
   end
 
   @impl true
