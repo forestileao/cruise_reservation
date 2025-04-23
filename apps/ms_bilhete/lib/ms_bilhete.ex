@@ -8,9 +8,6 @@ defmodule MsBilhete do
   @queue_bilhete_gerado "bilhete-gerado"
 
 
-  @pagamento_public_key "pagamento_public_key_simulada"
-
-
   defstruct bilhetes: %{}, conexao: nil, canal: nil
 
 
@@ -57,11 +54,12 @@ defmodule MsBilhete do
 
   @impl true
   def handle_info({:basic_deliver, payload, %{routing_key: @queue_pagamento_aprovado}}, state) do
-    mensagem = JSON.decode!(payload)
-    IO.puts("Mensagem de pagamento aprovado: #{inspect(mensagem)}")
+    payload = JSON.decode!(payload)
+    IO.puts("Mensagem de pagamento aprovado: #{inspect(payload)}")
 
 
-    if verificar_assinatura(mensagem, @pagamento_public_key) do
+    if verificar_assinatura(payload) do
+      mensagem = payload["mensagem"]
       reserva_id = mensagem["reserva_id"]
       pagamento_id = mensagem["pagamento_id"]
 
@@ -105,11 +103,15 @@ defmodule MsBilhete do
   end
 
 
-  defp verificar_assinatura(mensagem, chave_publica) do
+  def verificar_assinatura(payload) do
+    public_key = Application.get_env(:ms_reserva, :public_key)
+      |> :public_key.pem_decode()
+      |> hd()
+      |> :public_key.pem_entry_decode()
+    assinatura = payload["assinatura"] |> Base.decode64!()
+    mensagem = payload["mensagem"] |> JSON.encode!()
 
-
-    assinatura = mensagem["assinatura"]
-    true
+    :public_key.verify(mensagem, :sha256, assinatura, public_key)
   end
 
 

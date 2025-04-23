@@ -10,8 +10,6 @@ defmodule MsPagamento do
 
 
   @private_key "pagamento_private_key_simulada"
-  @public_key "pagamento_public_key_simulada"
-
 
   defstruct pagamentos: %{}, conexao: nil, canal: nil
 
@@ -19,11 +17,6 @@ defmodule MsPagamento do
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, %__MODULE__{}, name: __MODULE__)
   end
-
-  def get_public_key do
-    @public_key
-  end
-
 
   @impl true
   def init(state) do
@@ -81,10 +74,14 @@ defmodule MsPagamento do
       "data_processamento" => pagamento.data_processamento
     }
 
-    mensagem_assinada = Map.put(mensagem_base, "assinatura", assinar_mensagem(mensagem_base, @private_key))
+    assinatura = assinar_mensagem(mensagem_base |> JSON.encode!())
+    payload = %{
+      "mensagem" => mensagem_base,
+      "assinatura" => assinatura
+    }
 
     fila_destino = if pagamento_aprovado, do: @queue_pagamento_aprovado, else: @queue_pagamento_recusado
-    AMQP.Basic.publish(state.canal, @exchange, fila_destino, JSON.encode!(mensagem_assinada))
+    AMQP.Basic.publish(state.canal, @exchange, fila_destino, JSON.encode!(payload))
 
     IO.puts("Pagamento #{pagamento.status} para reserva #{reserva_id}, valor: #{valor_total}")
 
@@ -95,8 +92,15 @@ defmodule MsPagamento do
     {:noreply, state}
   end
 
-  defp assinar_mensagem(mensagem, chave_privada) do
-    "assinatura_#{:crypto.strong_rand_bytes(8) |> Base.encode16()}"
+  def assinar_mensagem(mensagem) do
+    private_key =
+      Application.get_env(:ms_pagamento, :private_key)
+      |> :public_key.pem_decode()
+      |> hd()
+      |> :public_key.pem_entry_decode()
+
+    :public_key.sign(mensagem, :sha256, private_key)
+    |> Base.encode64()
   end
 
   @impl true
