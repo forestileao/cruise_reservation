@@ -17,10 +17,10 @@ defmodule FrontWeb.ReservaLive.Index do
     |> Enum.map(fn {id, reserva} ->
       %{
         id: id,
-        cruzeiro: reserva["cruzeiro"],
-        navio: reserva["navio"],
-        data_embarque: reserva["data_embarque"],
-        status: reserva["status"]
+        cruzeiro_id: reserva["cruzeiro_id"],
+        data_criacao: reserva["data_criacao"],
+        status: reserva["status"],
+        valor_total: reserva["valor_total"]
       }
     end)
   end
@@ -57,10 +57,10 @@ defmodule FrontWeb.ReservaLive.Index do
           <tbody class="divide-y divide-gray-200">
             <%= for reserva <- @reservas do %>
               <tr class="hover:bg-gray-50">
-                <td class="py-3 px-4"><%= reserva.id %></td>
-                <td class="py-3 px-4"><%= reserva.cruzeiro_id %></td>
-                <td class="py-3 px-4"><%= reserva.data_criacao %></td>
-                <td class="py-3 px-4"><%= reserva.valor_total %></td>
+                <td class="py-3 px-4"><%=  Map.get(reserva, :id, "N/A" ) %></td>
+                <td class="py-3 px-4"><%= Map.get(reserva, :cruzeiro_id, "N/A" ) %></td>
+                <td class="py-3 px-4"><%= Map.get(reserva, :data_criacao, "N/A" ) %></td>
+                <td class="py-3 px-4"><%= Map.get(reserva, :valor_total, "N/A" ) %></td>
                 <td class="py-3 px-4">
                   <%= case reserva.status do %>
                     <% "pendente" -> %>
