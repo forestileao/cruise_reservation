@@ -8,9 +8,6 @@ defmodule MsPagamento do
   @queue_pagamento_aprovado "pagamento-aprovado"
   @queue_pagamento_recusado "pagamento-recusado"
 
-
-  @private_key "pagamento_private_key_simulada"
-
   defstruct pagamentos: %{}, conexao: nil, canal: nil
 
 

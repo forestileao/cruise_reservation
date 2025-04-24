@@ -100,7 +100,6 @@ defmodule FrontWeb.HomeLive do
         <div class="mt-6 flex space-x-4">
           <a href="/reservas" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Minhas Reservas</a>
           <a href="/reservas/nova" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Fazer uma Reserva</a>
-          <a href="/assinante" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Assinar Promoções</a>
         </div>
       </div>
 

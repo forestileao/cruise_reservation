@@ -3,9 +3,7 @@ defmodule MsMarketing do
   use AMQP
 
 
-  @exchange "cruzeiros"
   @exchange_promocoes "promocoes"
-
 
   @destinos ["Caribe", "Mediterrâneo", "Alasca", "Brasil", "Ásia"]
 
@@ -33,7 +31,6 @@ defmodule MsMarketing do
     {:ok, canal} = AMQP.Channel.open(conexao)
 
 
-    AMQP.Exchange.declare(canal, @exchange, :direct)
     AMQP.Exchange.declare(canal, @exchange_promocoes, :direct)
 
 
@@ -73,7 +70,7 @@ defmodule MsMarketing do
     end
 
 
-    Process.send_after(self(), :publicar_promocao_aleatoria, 20_000)
+    Process.send_after(self(), :publicar_promocao_aleatoria, 1_000)
 
     {:ok, estado_atualizado}
   end
@@ -146,7 +143,7 @@ defmodule MsMarketing do
     IO.puts("Promoção aleatória publicada: #{nova_promocao.titulo}")
 
 
-    Process.send_after(self(), :publicar_promocao_aleatoria, 30_000)
+    Process.send_after(self(), :publicar_promocao_aleatoria, 5_000)
 
     {:noreply, estado_atualizado}
   end

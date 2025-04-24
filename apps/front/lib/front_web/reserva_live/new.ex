@@ -99,7 +99,7 @@ defmodule FrontWeb.ReservaLive.New do
               </div>
               <div class="mt-4">
                 <button phx-click="voltar_step" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Voltar</button>
-                <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Ver Reservas</a>
+                <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Home</a>
               </div>
             </div>
           <% end %>
