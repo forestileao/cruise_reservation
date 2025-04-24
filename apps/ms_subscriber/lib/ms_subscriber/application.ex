@@ -8,7 +8,7 @@ defmodule MsSubscriber.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      {MsSubscriber, [destinos: ["Caribe", "Mediterrâneo", "Alasca", "Brasil", "Ásia"]]},
+      {MsSubscriber, [destinos: ["Caribe", "Mediterrâneo", "Alasca", "Brasil", "Ásia"]]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

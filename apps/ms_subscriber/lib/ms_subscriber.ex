@@ -26,16 +26,14 @@ defmodule MsSubscriber do
 
   @impl true
   def init(state) do
-    # Estabelecer conexão com RabbitMQ
     case AMQP.Connection.open() do
       {:ok, connection} ->
         Process.monitor(connection.pid)
+
         case AMQP.Channel.open(connection) do
           {:ok, channel} ->
-            # Declarar exchange
             AMQP.Exchange.declare(channel, @exchange_promocoes, :direct)
 
-            # Inscrever-se em todos os destinos iniciais
             state = %{state | connection: connection, channel: channel}
 
             Enum.each(state.destinos_inscritos, fn destino ->
@@ -78,7 +76,6 @@ defmodule MsSubscriber do
     {:reply, state.destinos_inscritos, state}
   end
 
-  # Manipular mensagens recebidas do RabbitMQ
   @impl true
   def handle_info({:basic_deliver, payload, %{routing_key: routing_key}}, state) do
     try do
@@ -99,19 +96,16 @@ defmodule MsSubscriber do
     {:noreply, state}
   end
 
-  # Confirmações de consumo
   @impl true
   def handle_info({:basic_consume_ok, %{consumer_tag: _consumer_tag}}, state) do
     {:noreply, state}
   end
 
-  # Cancelamentos de consumo
   @impl true
   def handle_info({:basic_cancel, %{consumer_tag: _consumer_tag}}, state) do
     {:stop, :normal, state}
   end
 
-  # Conexão caiu
   @impl true
   def handle_info({:DOWN, _, :process, _pid, reason}, state) do
     {:stop, {:connection_lost, reason}, state}
@@ -122,20 +116,17 @@ defmodule MsSubscriber do
     if state.connection do
       AMQP.Connection.close(state.connection)
     end
+
     :ok
   end
 
-  # Funções privadas auxiliares
   defp inscrever_em_fila(destino, state) do
     fila = "promocoes-#{String.downcase(destino)}"
 
-    # Declarar a fila
     AMQP.Queue.declare(state.channel, fila)
 
-    # Vincular a fila ao exchange
     AMQP.Queue.bind(state.channel, fila, @exchange_promocoes, routing_key: fila)
 
-    # Iniciar consumo
     {:ok, _consumer_tag} = AMQP.Basic.consume(state.channel, fila, nil, no_ack: true)
 
     IO.puts("Inscrito para receber promoções de #{destino}")
@@ -144,7 +135,6 @@ defmodule MsSubscriber do
   defp cancelar_inscricao_fila(destino, state) do
     fila = "promocoes-#{String.downcase(destino)}"
 
-    # Desvincular a fila do exchange
     AMQP.Queue.unbind(state.channel, fila, @exchange_promocoes, routing_key: fila)
 
     IO.puts("Cancelada inscrição para promoções de #{destino}")
