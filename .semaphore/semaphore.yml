@@ -1,0 +1,59 @@
+version: v1.0
+name: Go
+agent:
+  machine:
+    type: f1-standard-2
+    os_image: ubuntu2204
+blocks:
+  - name: Test
+    task:
+      jobs:
+        - name: go test
+          commands:
+            - sem-version go 1.11
+            - export GO111MODULE=on
+            - export GOPATH=~/go
+            - 'export PATH=/home/semaphore/go/bin:$PATH'
+            - checkout
+        - name: 'Job #2'
+          commands:
+            - echo "test"
+    dependencies: []
+  - name: 'Block #2'
+    dependencies:
+      - Test
+    task:
+      jobs:
+        - name: 'Job #1'
+          commands:
+            - echo "run tests"
+  - name: 'Block #3'
+    dependencies:
+      - Test
+    task:
+      jobs:
+        - name: 'Job #1'
+          commands: []
+  - name: 'Block #4'
+    dependencies:
+      - 'Block #3'
+    task:
+      jobs:
+        - name: 'Job #1'
+          commands: []
+promotions:
+  - name: Deploy to prod
+    pipeline_file: pipeline_2.yml
+  - name: Deploy
+    pipeline_file: pipeline_3.yml
+    auto_promote:
+      when: branch = 'master' AND result = 'passed'
+    parameters:
+      env_vars:
+        - required: true
+          options:
+            - proj1
+            - proj2
+          default_value: ''
+          description: ''
+          name: select_project
