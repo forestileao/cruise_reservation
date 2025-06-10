@@ -1,11 +1,6 @@
 defmodule SimuladorPagamentoExterno.Router do
   use Plug.Router
 
-  plug Plug.Parsers,
-    parsers: [:json],
-    pass: ["application/json"],
-    json_decoder: JSON
-
   plug :cors
   plug :match
   plug :dispatch

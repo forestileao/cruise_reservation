@@ -1,21 +1,9 @@
 defmodule MsPagamento.Router do
   use Plug.Router
 
-  plug Plug.Parsers,
-    parsers: [:json],
-    pass: ["application/json"],
-    json_decoder: JSON
-
-  plug :cors
   plug :match
   plug :dispatch
 
-  defp cors(conn, _opts) do
-    conn
-    |> put_resp_header("access-control-allow-origin", "*")
-    |> put_resp_header("access-control-allow-methods", "GET, POST, OPTIONS")
-    |> put_resp_header("access-control-allow-headers", "content-type")
-  end
 
   options _ do
     send_resp(conn, 200, "")

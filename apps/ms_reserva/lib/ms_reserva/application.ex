@@ -16,7 +16,8 @@ defmodule MsReserva.Application do
         scheme: :http,
         plug: MsReserva.Router,
         options: [port: 4001]
-      )
+      ),
+      {MsReserva.SSEManager, []}
     ]
 
     opts = [strategy: :one_for_one, name: MsReserva.Supervisor]

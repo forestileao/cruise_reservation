@@ -242,10 +242,35 @@
           <!-- Step 3: Detalhes da Reserva -->
           <div id="step-3" class="step" style="display: none">
             <h2 class="text-xl font-bold mb-4">Passo 3: Detalhes da Reserva</h2>
+
+            <!-- Resumo da seleção -->
+            <div class="bg-blue-50 p-4 rounded mb-4">
+              <h3 class="font-semibold mb-2">Resumo da Seleção:</h3>
+              <p>
+                Cruzeiro: <span id="cruzeiro-info" class="font-medium">-</span>
+              </p>
+              <p>
+                Data de embarque:
+                <span id="data-info" class="font-medium">-</span>
+              </p>
+            </div>
+
             <form id="finalizar-reserva-form">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label class="block font-semibold"
+                  <label class="block font-semibold mb-2"
+                    >Data de Embarque</label
+                  >
+                  <select
+                    id="data_embarque_select"
+                    class="p-2 border rounded w-full"
+                    onchange="updateDataEmbarque()"
+                  >
+                    <option value="">Selecione uma data</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block font-semibold mb-2"
                     >Número de Passageiros</label
                   >
                   <input
@@ -257,7 +282,9 @@
                   />
                 </div>
                 <div>
-                  <label class="block font-semibold">Número de Cabines</label>
+                  <label class="block font-semibold mb-2"
+                    >Número de Cabines</label
+                  >
                   <input
                     type="number"
                     id="num_cabines"
@@ -435,20 +462,22 @@
       let eventSource = null;
       let notificationHistory = [];
       let notificationsEnabled = false;
+      let currentItinerarios = [];
 
       // Funções de navegação
       function showPage(pageId) {
-        // Esconder todas as páginas
         const pages = document.querySelectorAll(".page");
         pages.forEach((page) => (page.style.display = "none"));
 
-        // Mostrar página selecionada
         const targetPage = document.getElementById(pageId + "-page");
         if (targetPage) {
           targetPage.style.display = "block";
         }
 
-        // Carregar dados específicos da página
+        if (pageId === "nova-reserva") {
+          showStep(1);
+        }
+
         if (pageId === "reservas") {
           loadReservas();
         } else if (pageId === "promocoes") {
@@ -458,11 +487,9 @@
       }
 
       function showStep(step) {
-        // Esconder todos os steps
         const steps = document.querySelectorAll(".step");
         steps.forEach((s) => (s.style.display = "none"));
 
-        // Mostrar step selecionado
         document.getElementById("step-" + step).style.display = "block";
         currentStep = step;
       }
@@ -505,6 +532,10 @@
       function displayItinerarios(itinerarios, containerId) {
         const container = document.getElementById(containerId);
 
+        if (containerId === "cruzeiros-disponiveis") {
+          currentItinerarios = itinerarios;
+        }
+
         if (!itinerarios || itinerarios.length === 0) {
           container.innerHTML =
             '<p class="text-gray-500">Nenhum itinerário encontrado com os filtros fornecidos.</p>';
@@ -545,55 +576,134 @@
           .join("");
       }
 
+      // Função para selecionar cruzeiro
+      function selecionarCruzeiro(cruzeiro_id) {
+        selectedCruzeiro = cruzeiro_id;
+
+        const cruzeiro = currentItinerarios.find((c) => c.id === cruzeiro_id);
+
+        if (cruzeiro) {
+          document.getElementById(
+            "cruzeiro-info"
+          ).textContent = `${cruzeiro.destino} - ${cruzeiro.navio}`;
+
+          const dataSelect = document.getElementById("data_embarque_select");
+          dataSelect.innerHTML = cruzeiro.datas_disponiveis
+            .map((data) => `<option value="${data}">${data}</option>`)
+            .join("");
+
+          reservaData.data_embarque = cruzeiro.datas_disponiveis[0];
+          document.getElementById("data-info").textContent =
+            cruzeiro.datas_disponiveis[0];
+
+          console.log(
+            "Cruzeiro selecionado:",
+            cruzeiro_id,
+            "Data padrão:",
+            cruzeiro.datas_disponiveis[0]
+          );
+        }
+
+        showStep(3);
+      }
+
+      // Função para atualizar data de embarque
+      function updateDataEmbarque() {
+        const selectedDate = document.getElementById(
+          "data_embarque_select"
+        ).value;
+        reservaData.data_embarque = selectedDate;
+        document.getElementById("data-info").textContent = selectedDate;
+        console.log("Data de embarque atualizada para:", selectedDate);
+      }
+
       // Função para carregar reservas
       async function loadReservas() {
-        const response = await apiRequest("/reservas");
-        if (response && response.reservas) {
-          const tbody = document.getElementById("reservas-tbody");
-          const reservasArray = Object.entries(response.reservas).map(
-            ([id, reserva]) => ({
-              id,
-              ...reserva,
-            })
-          );
+        console.log("Carregando reservas...");
 
-          tbody.innerHTML = reservasArray
-            .map(
-              (reserva) => `
-                    <tr class="hover:bg-gray-50">
-                        <td class="py-3 px-4">${reserva.id}</td>
-                        <td class="py-3 px-4">${
-                          reserva.cruzeiro_id || "N/A"
-                        }</td>
-                        <td class="py-3 px-4">${
-                          reserva.data_criacao || "N/A"
-                        }</td>
-                        <td class="py-3 px-4">${
-                          reserva.valor_total || "N/A"
-                        }</td>
-                        <td class="py-3 px-4">${getStatusBadge(
-                          reserva.status
-                        )}</td>
-                        <td class="py-3 px-4">
-                            <button onclick="showReservaDetails('${
-                              reserva.id
-                            }')" class="text-blue-600 hover:text-blue-800 mr-2">Detalhes</button>
-                            ${
-                              canCancelReserva(reserva.status)
-                                ? `<button onclick="confirmCancelReserva('${reserva.id}')" class="text-red-600 hover:text-red-800">Cancelar</button>`
-                                : ""
-                            }
+        try {
+          const response = await apiRequest("/reservas");
+          console.log("Resposta das reservas:", response);
+
+          if (response && response.reservas) {
+            const tbody = document.getElementById("reservas-tbody");
+            const reservasArray = Object.entries(response.reservas).map(
+              ([id, reserva]) => ({
+                id,
+                ...reserva,
+              })
+            );
+
+            console.log("Reservas processadas:", reservasArray);
+
+            if (reservasArray.length === 0) {
+              tbody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="py-6 px-4 text-center text-gray-500">
+                                    Nenhuma reserva encontrada. <a href="#" onclick="showPage('nova-reserva')" class="text-blue-600 hover:underline">Fazer primeira reserva</a>
+                                </td>
+                            </tr>
+                        `;
+            } else {
+              tbody.innerHTML = reservasArray
+                .map(
+                  (reserva) => `
+                            <tr class="hover:bg-gray-50">
+                                <td class="py-3 px-4">${reserva.id}</td>
+                                <td class="py-3 px-4">${
+                                  reserva.cruzeiro_id || "N/A"
+                                }</td>
+                                <td class="py-3 px-4">${
+                                  reserva.data_criacao || "N/A"
+                                }</td>
+                                <td class="py-3 px-4">R$ ${
+                                  reserva.valor_total || "N/A"
+                                }</td>
+                                <td class="py-3 px-4">${getStatusBadge(
+                                  reserva.status
+                                )}</td>
+                                <td class="py-3 px-4">
+                                    <button onclick="showReservaDetails('${
+                                      reserva.id
+                                    }')" class="text-blue-600 hover:text-blue-800 mr-2">Detalhes</button>
+                                    ${
+                                      canCancelReserva(reserva.status)
+                                        ? `<button onclick="confirmCancelReserva('${reserva.id}')" class="text-red-600 hover:text-red-800">Cancelar</button>`
+                                        : ""
+                                    }
+                                </td>
+                            </tr>
+                        `
+                )
+                .join("");
+            }
+          } else {
+            console.error("Resposta inválida das reservas:", response);
+            document.getElementById("reservas-tbody").innerHTML = `
+                        <tr>
+                            <td colspan="6" class="py-6 px-4 text-center text-red-500">
+                                Erro ao carregar reservas. Tente novamente.
+                            </td>
+                        </tr>
+                    `;
+          }
+        } catch (error) {
+          console.error("Erro ao carregar reservas:", error);
+          document.getElementById("reservas-tbody").innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-6 px-4 text-center text-red-500">
+                            Erro de conexão ao carregar reservas.
                         </td>
                     </tr>
-                `
-            )
-            .join("");
+                `;
         }
       }
 
       // Função para verificar se pode cancelar reserva
       function canCancelReserva(status) {
-        return ["pendente", "pagamento_aprovado"].includes(status);
+        return ["pendente", "pagamento_aprovado", "bilhete_gerado"].includes(
+          status
+        );
       }
 
       // Função para confirmar cancelamento de reserva
@@ -607,19 +717,31 @@
 
       // Função para cancelar reserva
       async function cancelReserva(reservaId) {
-        const response = await apiRequest(`/reservas/${reservaId}/cancelar`, {
-          method: "POST",
-        });
+        console.log("Tentando cancelar reserva:", reservaId);
 
-        if (response && response.success) {
-          showNotification("Reserva cancelada com sucesso!", "success");
-          loadReservas(); // Recarregar lista
-        } else {
-          showNotification(
-            "Erro ao cancelar reserva. Tente novamente.",
-            "error"
-          );
+        try {
+          const response = await apiRequest(`/reservas/${reservaId}/cancelar`, {
+            method: "POST",
+          });
+
+          console.log("Resposta do cancelamento:", response);
+
+          if (response && response.success) {
+            showNotification("Reserva cancelada com sucesso!", "success");
+            loadReservas();
+          } else {
+            showNotification(
+              `Erro ao cancelar reserva: ${
+                response?.erro || "Erro desconhecido"
+              }`,
+              "error"
+            );
+          }
+        } catch (error) {
+          console.error("Erro ao cancelar reserva:", error);
+          showNotification("Erro de conexão ao cancelar reserva.", "error");
         }
+
         closeModal();
       }
 
@@ -656,7 +778,7 @@
                         }</p>
                         <p><strong>Link de pagamento:</strong> <a href="${
                           reserva.link_pagamento
-                        }" class="text-blue-600">Clique aqui para pagar</a></p>
+                        }" class="text-blue-600" target="_blank">Clique aqui para pagar</a></p>
                         <p><strong>Número de Passageiros:</strong> ${
                           reserva.num_passageiros
                         }</p>
@@ -696,12 +818,6 @@
                 `;
           showPage("detalhes-reserva");
         }
-      }
-
-      // Função para selecionar cruzeiro
-      function selecionarCruzeiro(cruzeiro_id) {
-        selectedCruzeiro = cruzeiro_id;
-        showStep(3);
       }
 
       // Função para limpar filtros
@@ -805,15 +921,19 @@
           eventSource.close();
         }
 
+        console.log("Conectando ao SSE...");
         eventSource = new EventSource(API_BASE_URL + "/sse/promocoes");
 
         eventSource.onopen = function () {
+          console.log("Conexão SSE estabelecida");
           updateSSEStatus("connected");
         };
 
         eventSource.onmessage = function (event) {
+          console.log("Evento SSE recebido:", event.data);
           try {
             const data = JSON.parse(event.data);
+            console.log("Dados decodificados:", data);
             handleSSENotification(data);
           } catch (error) {
             console.error("Erro ao processar notificação SSE:", error);
@@ -823,9 +943,9 @@
         eventSource.onerror = function (error) {
           console.error("Erro SSE:", error);
           updateSSEStatus("error");
-          // Tentar reconectar após 5 segundos
           setTimeout(() => {
             if (notificationsEnabled) {
+              console.log("Tentando reconectar SSE...");
               connectSSE();
             }
           }, 5000);
@@ -863,7 +983,13 @@
       }
 
       function handleSSENotification(data) {
-        // Adicionar ao histórico
+        console.log("Processando notificação SSE:", data);
+
+        if (data.type === "heartbeat") {
+          console.log("Heartbeat recebido");
+          return;
+        }
+
         const notification = {
           id: Date.now(),
           timestamp: new Date().toLocaleString(),
@@ -874,19 +1000,20 @@
           dados: data,
         };
 
+        console.log("Notificação criada:", notification);
+
         notificationHistory.unshift(notification);
         updateNotificationHistory();
 
-        // Mostrar notificação na tela
         showNotification(
           `${notification.titulo}: ${notification.mensagem}`,
           "info"
         );
 
-        // Se estiver na página de promoções, recarregar
         if (
           document.getElementById("promocoes-page").style.display !== "none"
         ) {
+          console.log("Recarregando promoções...");
           loadPromocoes();
         }
       }
@@ -937,7 +1064,6 @@
 
         text.textContent = message;
 
-        // Definir cor baseada no tipo
         switch (type) {
           case "success":
             bar.className = "bg-green-600 text-white p-2 text-center";
@@ -952,7 +1078,6 @@
 
         bar.style.display = "block";
 
-        // Esconder automaticamente após 5 segundos
         setTimeout(() => {
           closeNotification();
         }, 5000);
@@ -997,14 +1122,32 @@
         .getElementById("finalizar-reserva-form")
         .addEventListener("submit", async (e) => {
           e.preventDefault();
+
+          let dataEmbarque = document.getElementById(
+            "data_embarque_select"
+          ).value;
+
+          if (!dataEmbarque) {
+            dataEmbarque = reservaData.data_embarque;
+          }
+
+          if (!dataEmbarque || dataEmbarque === "") {
+            const dataFutura = new Date();
+            dataFutura.setDate(dataFutura.getDate() + 30);
+            dataEmbarque = dataFutura.toISOString().split("T")[0];
+            console.log("Usando data padrão:", dataEmbarque);
+          }
+
           const payload = {
             cruzeiro_id: selectedCruzeiro,
-            data_embarque: reservaData.data_embarque,
+            data_embarque: dataEmbarque,
             num_passageiros: parseInt(
               document.getElementById("num_passageiros").value
             ),
             num_cabines: parseInt(document.getElementById("num_cabines").value),
           };
+
+          console.log("Enviando payload da reserva:", payload);
 
           const response = await apiRequest("/itinerarios/reserva", {
             method: "POST",
@@ -1015,14 +1158,16 @@
             const resultado = document.getElementById("reserva-resultado");
             resultado.innerHTML = `
                     <p class="text-green-700 font-bold">Sua reserva foi realizada com sucesso!</p>
-                    <p><strong>Link de pagamento:</strong> <a href="${response.reserva.link_pagamento}" class="text-blue-600">Clique aqui para pagar</a></p>
+                    <p><strong>Link de pagamento:</strong> <a href="${response.reserva.link_pagamento}" class="text-blue-600" target="_blank">Clique aqui para pagar</a></p>
                     <p><strong>ID da Reserva:</strong> ${response.reserva.id}</p>
                     <p><strong>Status:</strong> ${response.reserva.status}</p>
                     <p><strong>Data de Criação:</strong> ${response.reserva.data_criacao}</p>
+                    <p><strong>Data de Embarque:</strong> ${dataEmbarque}</p>
                 `;
             showStep(4);
             showNotification("Reserva criada com sucesso!", "success");
           } else {
+            console.error("Erro na resposta da reserva:", response);
             showNotification(
               "Erro ao criar reserva. Tente novamente.",
               "error"
@@ -1040,16 +1185,16 @@
 
       // Inicializar a aplicação
       document.addEventListener("DOMContentLoaded", () => {
+        console.log("Aplicação iniciando...");
         showPage("home");
 
-        // Verificar status de notificações e conectar SSE se necessário
+        console.log("Conectando SSE automaticamente...");
+        connectSSE();
+
         checkNotificationStatus().then(() => {
-          if (notificationsEnabled) {
-            connectSSE();
-          }
+          console.log("Status de notificações verificado");
         });
 
-        // Limpar histórico de notificações antigas (localStorage não disponível)
         updateNotificationHistory();
       });
 

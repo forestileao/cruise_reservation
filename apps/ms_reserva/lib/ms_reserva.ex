@@ -46,43 +46,6 @@ defmodule MsReserva do
 
   @impl true
   def init(state) do
-    # Dados dos itinerários
-    itinerarios = [
-      %{
-        id: "c1",
-        destino: "Caribe",
-        datas_disponiveis: ["2025-05-10", "2025-06-15", "2025-07-20"],
-        navio: "Estrela do Mar",
-        porto_embarque: "Miami",
-        porto_desembarque: "Miami",
-        lugares_visitados: ["Jamaica", "Bahamas", "México"],
-        noites: 7,
-        valor_por_pessoa: 3500
-      },
-      %{
-        id: "c2",
-        destino: "Mediterrâneo",
-        datas_disponiveis: ["2025-06-05", "2025-07-10", "2025-08-15"],
-        navio: "Horizonte Azul",
-        porto_embarque: "Barcelona",
-        porto_desembarque: "Barcelona",
-        lugares_visitados: ["Itália", "Grécia", "França"],
-        noites: 10,
-        valor_por_pessoa: 5200
-      },
-      %{
-        id: "c3",
-        destino: "Alasca",
-        datas_disponiveis: ["2025-06-20", "2025-07-25", "2025-08-30"],
-        navio: "Aventura Gelada",
-        porto_embarque: "Vancouver",
-        porto_desembarque: "Vancouver",
-        lugares_visitados: ["Juneau", "Skagway", "Ketchikan"],
-        noites: 7,
-        valor_por_pessoa: 4300
-      }
-    ]
-
     # Configurar RabbitMQ
     {:ok, conexao} = AMQP.Connection.open()
     {:ok, canal} = AMQP.Channel.open(conexao)
@@ -117,35 +80,38 @@ defmodule MsReserva do
       AMQP.Basic.consume(canal, fila_promocao, nil, no_ack: true)
     end
 
-    {:ok, %{state | itinerarios: itinerarios, conexao: conexao, canal: canal}}
+    {:ok, %{state | conexao: conexao, canal: canal}}
   end
 
   @impl true
   def handle_call({:consultar_itinerarios, destino, data_embarque, porto_embarque}, _from, state) do
-    # Fazer requisição REST para MS Itinerários
+    case make_get_itinerarios_request(destino, data_embarque, porto_embarque) do
+      {:ok, itinerarios} ->
+        {:reply, {:ok, itinerarios}, state}
+
+      {:error, _} ->
+        {:reply, {:erro, "Erro ao consultar itinerários"}, state}
+    end
+  end
+
+  defp make_get_itinerarios_request(destino, data_embarque, porto_embarque) do
     params = %{}
     params = if destino, do: Map.put(params, "destino", destino), else: params
     params = if data_embarque, do: Map.put(params, "data_embarque", data_embarque), else: params
     params = if porto_embarque, do: Map.put(params, "porto_embarque", porto_embarque), else: params
 
     query_string = URI.encode_query(params)
+    "http://localhost:4002/itinerarios/disponiveis?#{query_string}"
     url = "http://localhost:4002/itinerarios/disponiveis?#{query_string}"
 
     case HTTPoison.get(url) do
       {:ok, %{status_code: 200, body: body}} ->
         response = JSON.decode!(body)
-        {:reply, {:ok, response["itinerarios"]}, state}
+        {:ok, response["itinerarios"]}
 
       {:error, _} ->
-        IO.puts("Erro ao consultar MS Itinerários - usando dados locais")
-        # Fallback para dados locais em caso de erro
-        itinerarios_filtrados = state.itinerarios
-        |> Enum.filter(fn itinerario ->
-          (destino == nil || String.downcase(itinerario.destino) =~ String.downcase(destino)) &&
-          (data_embarque == nil || Enum.member?(itinerario.datas_disponiveis, data_embarque)) &&
-          (porto_embarque == nil || String.downcase(itinerario.porto_embarque) =~ String.downcase(porto_embarque))
-        end)
-        {:reply, {:ok, itinerarios_filtrados}, state}
+        IO.puts("Erro ao consultar MS Itinerários")
+        {:ok, []}
     end
   end
 
@@ -164,12 +130,11 @@ defmodule MsReserva do
       {:ok, %{status_code: 200, body: body}} ->
         result = JSON.decode!(body)
         if result["disponivel"] do
-          # Proceder com a reserva
           reserva_id = "res_#{:rand.uniform(10000)}"
 
-          # Buscar dados do itinerário localmente para calcular valor
-          itinerario = Enum.find(state.itinerarios, fn i -> i.id == cruzeiro_id end)
-          valor_total = if itinerario, do: itinerario.valor_por_pessoa * num_passageiros, else: 0
+          {:ok, itinerarios} = make_get_itinerarios_request(nil, data_embarque, nil)
+          itinerario = Enum.find(itinerarios, fn i -> i["id"] == cruzeiro_id end)
+          valor_total = if itinerario, do: itinerario["valor_por_pessoa"] * num_passageiros, else: 0
 
           nova_reserva = %{
             id: reserva_id,
@@ -234,40 +199,7 @@ defmodule MsReserva do
         {:reply, {:erro, error["erro"]}, state}
 
       {:error, _} ->
-        # Fallback para lógica local em caso de erro na comunicação
-        case Enum.find(state.itinerarios, fn i -> i.id == cruzeiro_id end) do
-          nil ->
-            {:reply, {:erro, "Cruzeiro não encontrado"}, state}
-
-          itinerario ->
-            reserva_id = "res_#{:rand.uniform(10000)}"
-            valor_total = itinerario.valor_por_pessoa * num_passageiros
-
-            nova_reserva = %{
-              id: reserva_id,
-              cruzeiro_id: cruzeiro_id,
-              data_embarque: data_embarque,
-              num_passageiros: num_passageiros,
-              num_cabines: num_cabines,
-              valor_total: valor_total,
-              status: "pendente",
-              link_pagamento: "https://pagamento.cruzeiros.com/#{reserva_id}",
-              data_criacao: DateTime.utc_now() |> DateTime.to_string(),
-              bilhete: nil
-            }
-
-            novas_reservas = Map.put(state.reservas, reserva_id, nova_reserva)
-
-            mensagem = JSON.encode!(%{
-              reserva_id: reserva_id,
-              valor_total: valor_total,
-              data_criacao: nova_reserva.data_criacao
-            })
-
-            AMQP.Basic.publish(state.canal, @exchange, @queue_reserva_criada, mensagem)
-
-            {:reply, {:ok, nova_reserva}, %{state | reservas: novas_reservas}}
-        end
+        {:reply, {:erro, "Erro ao verificar disponibilidade"}, state}
     end
   end
 
@@ -307,7 +239,7 @@ defmodule MsReserva do
         {:reply, {:erro, "Reserva não encontrada"}, state}
 
       reserva ->
-        if reserva.status in ["pendente", "pagamento_aprovado"] do
+        if reserva.status in ["pendente", "pagamento_aprovado", "bilhete_gerado"] do
           # Atualizar status da reserva
           reserva_cancelada = %{reserva | status: "cancelada"}
           novas_reservas = Map.put(state.reservas, reserva_id, reserva_cancelada)
@@ -338,41 +270,39 @@ defmodule MsReserva do
   end
 
   # Processar promoções recebidas via RabbitMQ
-  def handle_info({:basic_deliver, payload, %{routing_key: routing_key}}, state) do
-    if routing_key =~ "promocoes-" do
-      try do
-        promocao_data = JSON.decode!(payload)
+  def handle_info({:basic_deliver, payload, %{routing_key: routing_key}}, state) when routing_key not in [@queue_pagamento_aprovado, @queue_pagamento_recusado, @queue_bilhete_gerado, @queue_reserva_criada] do
+    try do
+      promocao_data = JSON.decode!(payload)
+      promocao = %{
+        id: promocao_data["promocao_id"],
+        destino: promocao_data["destino"],
+        titulo: promocao_data["titulo"],
+        descricao: promocao_data["descricao"],
+        desconto: promocao_data["desconto"],
+        validade: promocao_data["validade"],
+        ativa: true,
+        data_recebimento: DateTime.utc_now() |> DateTime.to_string()
+      }
 
-        promocao = %{
-          id: promocao_data["promocao_id"],
-          destino: promocao_data["destino"],
-          titulo: promocao_data["titulo"],
-          descricao: promocao_data["descricao"],
-          desconto: promocao_data["desconto"],
-          validade: promocao_data["validade"],
-          ativa: true,
-          data_recebimento: DateTime.utc_now() |> DateTime.to_string()
-        }
+      novas_promocoes = Map.put(state.promocoes, promocao.id, promocao)
+      event_data = %{
+        tipo: "promocao",
+        titulo: "Nova Promoção!",
+        mensagem: "#{promocao.titulo} - #{promocao.desconto}% de desconto",
+        promocao: promocao
+      }
 
-        # Armazenar promoção no estado local
-        novas_promocoes = Map.put(state.promocoes, promocao.id, promocao)
+      MsReserva.SSEManager.broadcast_event(event_data)
 
-        # Enviar via SSE para clientes conectados
-        MsReserva.SSEManager.broadcast_event(%{
-          tipo: "promocao",
-          titulo: "Nova Promoção!",
-          mensagem: "#{promocao.titulo} - #{promocao.desconto}% de desconto",
-          promocao: promocao
-        })
+      IO.puts("Promoção processada com sucesso: #{promocao.titulo}")
+      IO.puts("=====================================")
 
-        IO.puts("Promoção recebida via RabbitMQ: #{promocao.titulo}")
-
-        {:noreply, %{state | promocoes: novas_promocoes}}
-      rescue
-        e ->
-          IO.puts("Erro ao processar promoção: #{inspect(e)}")
-          {:noreply, state}
-      end
+      {:noreply, %{state | promocoes: novas_promocoes}}
+    rescue
+      e ->
+        IO.puts("ERRO ao processar promoção: #{inspect(e)}")
+        IO.puts("=====================================")
+        {:noreply, state}
     end
   end
 
