@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CruzeiroMar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100">
+    <!-- Barra de notificações SSE -->
+    <div
+      id="notification-bar"
+      class="bg-blue-600 text-white p-2 text-center"
+      style="display: none"
+    >
+      <span id="notification-text"></span>
+      <button
+        onclick="closeNotification()"
+        class="ml-4 text-white hover:text-gray-200"
+      >
+        ×
+      </button>
+    </div>
+
+    <!-- Navegação -->
+    <nav class="bg-blue-700 text-white p-4">
+      <div class="max-w-4xl mx-auto flex justify-between items-center">
+        <h1 class="text-xl font-bold">CruzeiroMar</h1>
+        <div class="space-x-4">
+          <button onclick="showPage('home')" class="hover:underline">
+            Home
+          </button>
+          <button onclick="showPage('reservas')" class="hover:underline">
+            Minhas Reservas
+          </button>
+          <button onclick="showPage('nova-reserva')" class="hover:underline">
+            Nova Reserva
+          </button>
+          <button onclick="showPage('promocoes')" class="hover:underline">
+            Promoções
+          </button>
+          <button onclick="showPage('assinante')" class="hover:underline">
+            Área do Assinante
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Status de conexão SSE -->
+    <div class="max-w-4xl mx-auto p-2">
+      <div id="sse-status" class="text-sm text-gray-600">
+        <span
+          id="sse-indicator"
+          class="inline-block w-2 h-2 rounded-full bg-red-500 mr-2"
+        ></span>
+        <span id="sse-text">Desconectado das notificações</span>
+      </div>
+    </div>
+
+    <!-- Página Home -->
+    <div id="home-page" class="page">
+      <div class="max-w-4xl mx-auto p-6">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h1 class="text-3xl font-bold text-blue-700 mb-4">
+            Bem-vindo ao CruzeiroMar
+          </h1>
+          <p class="text-gray-700 mb-4">
+            Descubra o mundo navegando em nossos luxuosos cruzeiros. Oferecemos
+            destinos incríveis, acomodações confortáveis e experiências
+            inesquecíveis.
+          </p>
+          <div class="mt-6 flex space-x-4">
+            <button
+              onclick="showPage('reservas')"
+              class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Minhas Reservas
+            </button>
+            <button
+              onclick="showPage('nova-reserva')"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Fazer uma Reserva
+            </button>
+            <button
+              onclick="showPage('promocoes')"
+              class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Promoções
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 class="text-xl font-bold mb-4">
+            Consultar Itinerários Disponíveis
+          </h2>
+          <form id="filter-form">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <input
+                type="text"
+                id="destino"
+                placeholder="Destino"
+                class="p-2 border rounded w-full"
+              />
+              <input
+                type="date"
+                id="data_embarque"
+                class="p-2 border rounded w-full"
+              />
+              <input
+                type="text"
+                id="porto_embarque"
+                placeholder="Porto de Embarque"
+                class="p-2 border rounded w-full"
+              />
+            </div>
+            <div class="mt-4">
+              <button
+                type="submit"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Buscar
+              </button>
+              <button
+                type="button"
+                onclick="clearFilters()"
+                class="ml-4 text-blue-500 underline"
+              >
+                Limpar
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h2 class="text-2xl font-bold text-blue-700 mb-4">
+            Itinerários Disponíveis
+          </h2>
+          <div id="itinerarios-container">
+            <p class="text-gray-500">
+              Use os filtros acima para buscar itinerários.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Página Minhas Reservas -->
+    <div id="reservas-page" class="page" style="display: none">
+      <div class="max-w-4xl mx-auto p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h1 class="text-3xl font-bold text-blue-700">Minhas Reservas</h1>
+          <button
+            onclick="showPage('nova-reserva')"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Nova Reserva
+          </button>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+          <table class="min-w-full">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="py-3 px-4 text-left">ID</th>
+                <th class="py-3 px-4 text-left">Cruzeiro</th>
+                <th class="py-3 px-4 text-left">Data</th>
+                <th class="py-3 px-4 text-left">Valor Total</th>
+                <th class="py-3 px-4 text-left">Status</th>
+                <th class="py-3 px-4 text-left">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="reservas-tbody" class="divide-y divide-gray-200">
+              <!-- Reservas serão carregadas aqui -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Página Nova Reserva -->
+    <div id="nova-reserva-page" class="page" style="display: none">
+      <div class="max-w-4xl mx-auto p-6">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h1 class="text-3xl font-bold text-blue-700 mb-4">
+            Efetuar Nova Reserva
+          </h1>
+
+          <!-- Step 1: Filtros -->
+          <div id="step-1" class="step">
+            <h2 class="text-xl font-bold mb-4">
+              Passo 1: Filtros de Itinerário
+            </h2>
+            <form id="buscar-cruzeiros-form">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input
+                  type="text"
+                  id="nova-destino"
+                  placeholder="Destino"
+                  class="p-2 border rounded w-full"
+                />
+                <input
+                  type="date"
+                  id="nova-data_embarque"
+                  class="p-2 border rounded w-full"
+                />
+                <input
+                  type="text"
+                  id="nova-porto_embarque"
+                  placeholder="Porto de Embarque"
+                  class="p-2 border rounded w-full"
+                />
+              </div>
+              <div class="mt-4">
+                <button
+                  type="submit"
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Buscar Itinerários
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Step 2: Selecionar Cruzeiro -->
+          <div id="step-2" class="step" style="display: none">
+            <h2 class="text-xl font-bold mb-4">
+              Passo 2: Selecionar Itinerário
+            </h2>
+            <div id="cruzeiros-disponiveis"></div>
+            <div class="mt-4">
+              <button
+                onclick="showStep(1)"
+                class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Voltar
+              </button>
+            </div>
+          </div>
+
+          <!-- Step 3: Detalhes da Reserva -->
+          <div id="step-3" class="step" style="display: none">
+            <h2 class="text-xl font-bold mb-4">Passo 3: Detalhes da Reserva</h2>
+            <form id="finalizar-reserva-form">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block font-semibold"
+                    >Número de Passageiros</label
+                  >
+                  <input
+                    type="number"
+                    id="num_passageiros"
+                    value="1"
+                    class="p-2 border rounded w-full"
+                    min="1"
+                  />
+                </div>
+                <div>
+                  <label class="block font-semibold">Número de Cabines</label>
+                  <input
+                    type="number"
+                    id="num_cabines"
+                    value="1"
+                    class="p-2 border rounded w-full"
+                    min="1"
+                  />
+                </div>
+              </div>
+              <div class="mt-4">
+                <button
+                  type="submit"
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Finalizar Reserva
+                </button>
+              </div>
+            </form>
+            <div class="mt-4">
+              <button
+                onclick="showStep(2)"
+                class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Voltar
+              </button>
+            </div>
+          </div>
+
+          <!-- Step 4: Reserva Concluída -->
+          <div id="step-4" class="step" style="display: none">
+            <h2 class="text-xl font-bold mb-4">Passo 4: Reserva Concluída</h2>
+            <div
+              id="reserva-resultado"
+              class="p-4 bg-green-100 border border-green-500 rounded"
+            >
+              <!-- Resultado da reserva será mostrado aqui -->
+            </div>
+            <div class="mt-4">
+              <button
+                onclick="showPage('home')"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Home
+              </button>
+              <button
+                onclick="showPage('reservas')"
+                class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ml-2"
+              >
+                Ver Minhas Reservas
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Página Promoções -->
+    <div id="promocoes-page" class="page" style="display: none">
+      <div class="max-w-4xl mx-auto p-6">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h1 class="text-3xl font-bold text-blue-700 mb-4">
+            Notificações de Promoções
+          </h1>
+
+          <div class="mb-6">
+            <div
+              class="flex items-center justify-between p-4 bg-blue-50 rounded-lg"
+            >
+              <div>
+                <h3 class="text-lg font-semibold">Status das Notificações</h3>
+                <p id="notification-status" class="text-gray-600">
+                  Verificando status...
+                </p>
+              </div>
+              <div>
+                <button
+                  id="toggle-notifications"
+                  onclick="toggleNotifications()"
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Carregando...
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <h2 class="text-xl font-bold mb-4">Promoções Ativas</h2>
+            <div id="promocoes-container">
+              <p class="text-gray-500">Carregando promoções...</p>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <h2 class="text-xl font-bold mb-4">Histórico de Notificações</h2>
+            <div
+              id="historico-notificacoes"
+              class="space-y-2 max-h-64 overflow-y-auto"
+            >
+              <!-- Histórico será preenchido pelo JavaScript -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Página Detalhes da Reserva -->
+    <div id="detalhes-reserva-page" class="page" style="display: none">
+      <div class="max-w-4xl mx-auto p-6">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h1 class="text-3xl font-bold text-blue-700 mb-4">
+            Detalhes da Reserva
+          </h1>
+          <div id="detalhes-reserva-content">
+            <!-- Conteúdo será carregado dinamicamente -->
+          </div>
+          <div class="mt-4">
+            <button
+              onclick="showPage('reservas')"
+              class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Voltar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Página Área do Assinante -->
+    <div id="assinante-page" class="page" style="display: none">
+      <div class="max-w-4xl mx-auto p-6">
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h1 class="text-3xl font-bold text-blue-700 mb-4">
+            Área do Assinante
+          </h1>
+          <p class="text-gray-700">Bem-vindo à área do assinante!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Confirmação -->
+    <div
+      id="confirm-modal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+      style="display: none"
+    >
+      <div class="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+        <h3 class="text-lg font-bold mb-4" id="modal-title">Confirmar Ação</h3>
+        <p class="text-gray-600 mb-6" id="modal-message">
+          Tem certeza que deseja continuar?
+        </p>
+        <div class="flex justify-end space-x-4">
+          <button
+            onclick="closeModal()"
+            class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+          >
+            Cancelar
+          </button>
+          <button
+            id="modal-confirm"
+            class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Configuração da API
+      const API_BASE_URL = "http://localhost:4001";
+      let currentStep = 1;
+      let selectedCruzeiro = null;
+      let reservaData = {};
+      let eventSource = null;
+      let notificationHistory = [];
+      let notificationsEnabled = false;
+
+      // Funções de navegação
+      function showPage(pageId) {
+        // Esconder todas as páginas
+        const pages = document.querySelectorAll(".page");
+        pages.forEach((page) => (page.style.display = "none"));
+
+        // Mostrar página selecionada
+        const targetPage = document.getElementById(pageId + "-page");
+        if (targetPage) {
+          targetPage.style.display = "block";
+        }
+
+        // Carregar dados específicos da página
+        if (pageId === "reservas") {
+          loadReservas();
+        } else if (pageId === "promocoes") {
+          loadPromocoes();
+          checkNotificationStatus();
+        }
+      }
+
+      function showStep(step) {
+        // Esconder todos os steps
+        const steps = document.querySelectorAll(".step");
+        steps.forEach((s) => (s.style.display = "none"));
+
+        // Mostrar step selecionado
+        document.getElementById("step-" + step).style.display = "block";
+        currentStep = step;
+      }
+
+      // Função para fazer requisições à API
+      async function apiRequest(endpoint, options = {}) {
+        try {
+          const response = await fetch(API_BASE_URL + endpoint, {
+            headers: {
+              "Content-Type": "application/json",
+              ...options.headers,
+            },
+            ...options,
+          });
+          return await response.json();
+        } catch (error) {
+          console.error("Erro na API:", error);
+          return null;
+        }
+      }
+
+      // Função para buscar itinerários
+      async function buscarItinerarios(filtros = {}) {
+        const params = new URLSearchParams();
+        if (filtros.destino) params.append("destino", filtros.destino);
+        if (filtros.data_embarque)
+          params.append("data_embarque", filtros.data_embarque);
+        if (filtros.porto_embarque)
+          params.append("porto_embarque", filtros.porto_embarque);
+
+        const endpoint =
+          "/itinerarios/disponiveis" +
+          (params.toString() ? "?" + params.toString() : "");
+        const response = await apiRequest(endpoint);
+
+        return response ? response.itinerarios || [] : [];
+      }
+
+      // Função para exibir itinerários
+      function displayItinerarios(itinerarios, containerId) {
+        const container = document.getElementById(containerId);
+
+        if (!itinerarios || itinerarios.length === 0) {
+          container.innerHTML =
+            '<p class="text-gray-500">Nenhum itinerário encontrado com os filtros fornecidos.</p>';
+          return;
+        }
+
+        container.innerHTML = itinerarios
+          .map(
+            (itin) => `
+                <div class="border p-4 rounded shadow mb-4">
+                    <h3 class="text-xl font-semibold text-blue-800">${
+                      itin.destino
+                    } - ${itin.navio}</h3>
+                    <p><strong>Datas disponíveis:</strong> ${itin.datas_disponiveis.join(
+                      ", "
+                    )}</p>
+                    <p><strong>Porto de Embarque:</strong> ${
+                      itin.porto_embarque
+                    }</p>
+                    <p><strong>Porto de Desembarque:</strong> ${
+                      itin.porto_desembarque
+                    }</p>
+                    <p><strong>Lugares Visitados:</strong> ${itin.lugares_visitados.join(
+                      ", "
+                    )}</p>
+                    <p><strong>Noites:</strong> ${itin.noites} noites</p>
+                    <p><strong>Valor por Pessoa:</strong> R$ ${
+                      itin.valor_por_pessoa
+                    }</p>
+                    ${
+                      containerId === "cruzeiros-disponiveis"
+                        ? `<button onclick="selecionarCruzeiro('${itin.id}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2">Selecionar Cruzeiro</button>`
+                        : ""
+                    }
+                </div>
+            `
+          )
+          .join("");
+      }
+
+      // Função para carregar reservas
+      async function loadReservas() {
+        const response = await apiRequest("/reservas");
+        if (response && response.reservas) {
+          const tbody = document.getElementById("reservas-tbody");
+          const reservasArray = Object.entries(response.reservas).map(
+            ([id, reserva]) => ({
+              id,
+              ...reserva,
+            })
+          );
+
+          tbody.innerHTML = reservasArray
+            .map(
+              (reserva) => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-3 px-4">${reserva.id}</td>
+                        <td class="py-3 px-4">${
+                          reserva.cruzeiro_id || "N/A"
+                        }</td>
+                        <td class="py-3 px-4">${
+                          reserva.data_criacao || "N/A"
+                        }</td>
+                        <td class="py-3 px-4">${
+                          reserva.valor_total || "N/A"
+                        }</td>
+                        <td class="py-3 px-4">${getStatusBadge(
+                          reserva.status
+                        )}</td>
+                        <td class="py-3 px-4">
+                            <button onclick="showReservaDetails('${
+                              reserva.id
+                            }')" class="text-blue-600 hover:text-blue-800 mr-2">Detalhes</button>
+                            ${
+                              canCancelReserva(reserva.status)
+                                ? `<button onclick="confirmCancelReserva('${reserva.id}')" class="text-red-600 hover:text-red-800">Cancelar</button>`
+                                : ""
+                            }
+                        </td>
+                    </tr>
+                `
+            )
+            .join("");
+        }
+      }
+
+      // Função para verificar se pode cancelar reserva
+      function canCancelReserva(status) {
+        return ["pendente", "pagamento_aprovado"].includes(status);
+      }
+
+      // Função para confirmar cancelamento de reserva
+      function confirmCancelReserva(reservaId) {
+        showConfirmModal(
+          "Cancelar Reserva",
+          "Tem certeza que deseja cancelar esta reserva? Esta ação não pode ser desfeita.",
+          () => cancelReserva(reservaId)
+        );
+      }
+
+      // Função para cancelar reserva
+      async function cancelReserva(reservaId) {
+        const response = await apiRequest(`/reservas/${reservaId}/cancelar`, {
+          method: "POST",
+        });
+
+        if (response && response.success) {
+          showNotification("Reserva cancelada com sucesso!", "success");
+          loadReservas(); // Recarregar lista
+        } else {
+          showNotification(
+            "Erro ao cancelar reserva. Tente novamente.",
+            "error"
+          );
+        }
+        closeModal();
+      }
+
+      // Função para obter badge do status
+      function getStatusBadge(status) {
+        const badges = {
+          pendente:
+            '<span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">Aguardando Pagamento</span>',
+          pagamento_aprovado:
+            '<span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">Pagamento Aprovado</span>',
+          bilhete_gerado:
+            '<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Bilhete Emitido</span>',
+          cancelada:
+            '<span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">Cancelada</span>',
+        };
+        return (
+          badges[status] ||
+          `<span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">${status}</span>`
+        );
+      }
+
+      // Função para mostrar detalhes da reserva
+      async function showReservaDetails(reservaId) {
+        const response = await apiRequest(`/reservas/${reservaId}`);
+        if (response && response.reserva) {
+          const reserva = response.reserva;
+          const content = document.getElementById("detalhes-reserva-content");
+          content.innerHTML = `
+                    <div class="p-4 bg-green-100 border border-green-500 rounded">
+                        <p><strong>ID da Reserva:</strong> ${reserva.id}</p>
+                        <p><strong>Status:</strong> ${reserva.status}</p>
+                        <p><strong>Data de Criação:</strong> ${
+                          reserva.data_criacao
+                        }</p>
+                        <p><strong>Link de pagamento:</strong> <a href="${
+                          reserva.link_pagamento
+                        }" class="text-blue-600">Clique aqui para pagar</a></p>
+                        <p><strong>Número de Passageiros:</strong> ${
+                          reserva.num_passageiros
+                        }</p>
+                        <p><strong>Número de Cabines:</strong> ${
+                          reserva.num_cabines
+                        }</p>
+                        <p><strong>Cruzeiro:</strong> ${reserva.cruzeiro_id}</p>
+                        <p><strong>Valor total:</strong> ${
+                          reserva.valor_total
+                        }</p>
+                    </div>
+                    ${
+                      reserva.bilhete
+                        ? `
+                        <div class="p-4 bg-green-100 border border-green-500 rounded mt-4">
+                            <h3 class="font-bold mb-2">Bilhete:</h3>
+                            <pre class="text-sm">${JSON.stringify(
+                              reserva.bilhete,
+                              null,
+                              2
+                            )}</pre>
+                        </div>
+                    `
+                        : ""
+                    }
+                    ${
+                      canCancelReserva(reserva.status)
+                        ? `
+                        <div class="mt-4">
+                            <button onclick="confirmCancelReserva('${reserva.id}')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                                Cancelar Reserva
+                            </button>
+                        </div>
+                    `
+                        : ""
+                    }
+                `;
+          showPage("detalhes-reserva");
+        }
+      }
+
+      // Função para selecionar cruzeiro
+      function selecionarCruzeiro(cruzeiro_id) {
+        selectedCruzeiro = cruzeiro_id;
+        showStep(3);
+      }
+
+      // Função para limpar filtros
+      function clearFilters() {
+        document.getElementById("destino").value = "";
+        document.getElementById("data_embarque").value = "";
+        document.getElementById("porto_embarque").value = "";
+        document.getElementById("itinerarios-container").innerHTML =
+          '<p class="text-gray-500">Use os filtros acima para buscar itinerários.</p>';
+      }
+
+      // Funções de Promoções e Notificações
+      async function loadPromocoes() {
+        const response = await apiRequest("/promocoes");
+        const container = document.getElementById("promocoes-container");
+
+        if (response && response.promocoes && response.promocoes.length > 0) {
+          container.innerHTML = response.promocoes
+            .map(
+              (promo) => `
+                    <div class="border p-4 rounded shadow mb-4">
+                        <h3 class="text-lg font-semibold text-green-800">${
+                          promo.titulo
+                        }</h3>
+                        <p class="text-gray-600">${promo.descricao}</p>
+                        <p class="text-sm text-gray-500">Válida até: ${
+                          promo.validade
+                        }</p>
+                        ${
+                          promo.desconto
+                            ? `<p class="text-lg font-bold text-green-600">Desconto: ${promo.desconto}%</p>`
+                            : ""
+                        }
+                    </div>
+                `
+            )
+            .join("");
+        } else {
+          container.innerHTML =
+            '<p class="text-gray-500">Nenhuma promoção ativa no momento.</p>';
+        }
+      }
+
+      async function checkNotificationStatus() {
+        const response = await apiRequest("/notificacoes/status");
+        if (response) {
+          notificationsEnabled = response.ativo;
+          updateNotificationUI();
+        }
+      }
+
+      function updateNotificationUI() {
+        const statusText = document.getElementById("notification-status");
+        const toggleButton = document.getElementById("toggle-notifications");
+
+        if (notificationsEnabled) {
+          statusText.textContent =
+            "Você está recebendo notificações de promoções";
+          statusText.className = "text-green-600";
+          toggleButton.textContent = "Cancelar Notificações";
+          toggleButton.className =
+            "bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded";
+        } else {
+          statusText.textContent =
+            "Você não está recebendo notificações de promoções";
+          statusText.className = "text-gray-600";
+          toggleButton.textContent = "Ativar Notificações";
+          toggleButton.className =
+            "bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded";
+        }
+      }
+
+      async function toggleNotifications() {
+        const endpoint = notificationsEnabled
+          ? "/notificacoes/cancelar"
+          : "/notificacoes/registrar";
+        const response = await apiRequest(endpoint, { method: "POST" });
+
+        if (response && response.success) {
+          notificationsEnabled = !notificationsEnabled;
+          updateNotificationUI();
+
+          if (notificationsEnabled) {
+            connectSSE();
+            showNotification("Notificações ativadas com sucesso!", "success");
+          } else {
+            disconnectSSE();
+            showNotification("Notificações canceladas com sucesso!", "success");
+          }
+        } else {
+          showNotification(
+            "Erro ao alterar configuração de notificações.",
+            "error"
+          );
+        }
+      }
+
+      // Funções de Server-Sent Events (SSE)
+      function connectSSE() {
+        if (eventSource) {
+          eventSource.close();
+        }
+
+        eventSource = new EventSource(API_BASE_URL + "/sse/promocoes");
+
+        eventSource.onopen = function () {
+          updateSSEStatus("connected");
+        };
+
+        eventSource.onmessage = function (event) {
+          try {
+            const data = JSON.parse(event.data);
+            handleSSENotification(data);
+          } catch (error) {
+            console.error("Erro ao processar notificação SSE:", error);
+          }
+        };
+
+        eventSource.onerror = function (error) {
+          console.error("Erro SSE:", error);
+          updateSSEStatus("error");
+          // Tentar reconectar após 5 segundos
+          setTimeout(() => {
+            if (notificationsEnabled) {
+              connectSSE();
+            }
+          }, 5000);
+        };
+      }
+
+      function disconnectSSE() {
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+          updateSSEStatus("disconnected");
+        }
+      }
+
+      function updateSSEStatus(status) {
+        const indicator = document.getElementById("sse-indicator");
+        const text = document.getElementById("sse-text");
+
+        switch (status) {
+          case "connected":
+            indicator.className =
+              "inline-block w-2 h-2 rounded-full bg-green-500 mr-2";
+            text.textContent = "Conectado às notificações";
+            break;
+          case "error":
+            indicator.className =
+              "inline-block w-2 h-2 rounded-full bg-yellow-500 mr-2";
+            text.textContent = "Erro na conexão - tentando reconectar...";
+            break;
+          default:
+            indicator.className =
+              "inline-block w-2 h-2 rounded-full bg-red-500 mr-2";
+            text.textContent = "Desconectado das notificações";
+        }
+      }
+
+      function handleSSENotification(data) {
+        // Adicionar ao histórico
+        const notification = {
+          id: Date.now(),
+          timestamp: new Date().toLocaleString(),
+          tipo: data.tipo || "promocao",
+          titulo: data.titulo || "Nova Notificação",
+          mensagem:
+            data.mensagem || data.message || "Você tem uma nova notificação!",
+          dados: data,
+        };
+
+        notificationHistory.unshift(notification);
+        updateNotificationHistory();
+
+        // Mostrar notificação na tela
+        showNotification(
+          `${notification.titulo}: ${notification.mensagem}`,
+          "info"
+        );
+
+        // Se estiver na página de promoções, recarregar
+        if (
+          document.getElementById("promocoes-page").style.display !== "none"
+        ) {
+          loadPromocoes();
+        }
+      }
+
+      function updateNotificationHistory() {
+        const container = document.getElementById("historico-notificacoes");
+
+        if (notificationHistory.length === 0) {
+          container.innerHTML =
+            '<p class="text-gray-500">Nenhuma notificação recebida ainda.</p>';
+          return;
+        }
+
+        container.innerHTML = notificationHistory
+          .slice(0, 10)
+          .map(
+            (notif) => `
+                <div class="p-3 bg-gray-50 rounded border-l-4 border-blue-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-semibold text-sm">${notif.titulo}</h4>
+                            <p class="text-sm text-gray-600">${notif.mensagem}</p>
+                        </div>
+                        <span class="text-xs text-gray-400">${notif.timestamp}</span>
+                    </div>
+                </div>
+            `
+          )
+          .join("");
+      }
+
+      // Funções de Modal
+      function showConfirmModal(title, message, onConfirm) {
+        document.getElementById("modal-title").textContent = title;
+        document.getElementById("modal-message").textContent = message;
+        document.getElementById("modal-confirm").onclick = onConfirm;
+        document.getElementById("confirm-modal").style.display = "flex";
+      }
+
+      function closeModal() {
+        document.getElementById("confirm-modal").style.display = "none";
+      }
+
+      // Funções de Notificação Visual
+      function showNotification(message, type = "info") {
+        const bar = document.getElementById("notification-bar");
+        const text = document.getElementById("notification-text");
+
+        text.textContent = message;
+
+        // Definir cor baseada no tipo
+        switch (type) {
+          case "success":
+            bar.className = "bg-green-600 text-white p-2 text-center";
+            break;
+          case "error":
+            bar.className = "bg-red-600 text-white p-2 text-center";
+            break;
+          case "info":
+          default:
+            bar.className = "bg-blue-600 text-white p-2 text-center";
+        }
+
+        bar.style.display = "block";
+
+        // Esconder automaticamente após 5 segundos
+        setTimeout(() => {
+          closeNotification();
+        }, 5000);
+      }
+
+      function closeNotification() {
+        document.getElementById("notification-bar").style.display = "none";
+      }
+
+      // Event Listeners
+      document
+        .getElementById("filter-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const filtros = {
+            destino: document.getElementById("destino").value,
+            data_embarque: document.getElementById("data_embarque").value,
+            porto_embarque: document.getElementById("porto_embarque").value,
+          };
+          const itinerarios = await buscarItinerarios(filtros);
+          displayItinerarios(itinerarios, "itinerarios-container");
+        });
+
+      document
+        .getElementById("buscar-cruzeiros-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const filtros = {
+            destino: document.getElementById("nova-destino").value,
+            data_embarque: document.getElementById("nova-data_embarque").value,
+            porto_embarque: document.getElementById("nova-porto_embarque")
+              .value,
+          };
+
+          reservaData = filtros;
+          const itinerarios = await buscarItinerarios(filtros);
+          displayItinerarios(itinerarios, "cruzeiros-disponiveis");
+          showStep(2);
+        });
+
+      document
+        .getElementById("finalizar-reserva-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const payload = {
+            cruzeiro_id: selectedCruzeiro,
+            data_embarque: reservaData.data_embarque,
+            num_passageiros: parseInt(
+              document.getElementById("num_passageiros").value
+            ),
+            num_cabines: parseInt(document.getElementById("num_cabines").value),
+          };
+
+          const response = await apiRequest("/itinerarios/reserva", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
+
+          if (response && response.reserva) {
+            const resultado = document.getElementById("reserva-resultado");
+            resultado.innerHTML = `
+                    <p class="text-green-700 font-bold">Sua reserva foi realizada com sucesso!</p>
+                    <p><strong>Link de pagamento:</strong> <a href="${response.reserva.link_pagamento}" class="text-blue-600">Clique aqui para pagar</a></p>
+                    <p><strong>ID da Reserva:</strong> ${response.reserva.id}</p>
+                    <p><strong>Status:</strong> ${response.reserva.status}</p>
+                    <p><strong>Data de Criação:</strong> ${response.reserva.data_criacao}</p>
+                `;
+            showStep(4);
+            showNotification("Reserva criada com sucesso!", "success");
+          } else {
+            showNotification(
+              "Erro ao criar reserva. Tente novamente.",
+              "error"
+            );
+          }
+        });
+
+      // Fechar modal com ESC
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          closeModal();
+          closeNotification();
+        }
+      });
+
+      // Inicializar a aplicação
+      document.addEventListener("DOMContentLoaded", () => {
+        showPage("home");
+
+        // Verificar status de notificações e conectar SSE se necessário
+        checkNotificationStatus().then(() => {
+          if (notificationsEnabled) {
+            connectSSE();
+          }
+        });
+
+        // Limpar histórico de notificações antigas (localStorage não disponível)
+        updateNotificationHistory();
+      });
+
+      // Limpar conexões SSE ao fechar a página
+      window.addEventListener("beforeunload", () => {
+        disconnectSSE();
+      });
+    </script>
+  </body>
+</html>
