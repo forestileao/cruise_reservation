@@ -100,6 +100,32 @@ defmodule MsPagamento do
     |> Base.encode64()
   end
 
+  def solicitar_link_pagamento(reserva_id, valor_total, dados_cliente \\ %{}) do
+    GenServer.call(__MODULE__, {:solicitar_link_pagamento, reserva_id, valor_total, dados_cliente})
+  end
+
+  @impl true
+  def handle_call({:solicitar_link_pagamento, reserva_id, valor_total, dados_cliente}, _from, state) do
+    # Gerar link de pagamento
+    link_pagamento = "http://localhost:4010/pay/#{reserva_id}?valor=#{valor_total}"
+
+    # Criar registro de pagamento pendente
+    pagamento = %{
+      id: "pag_#{:rand.uniform(10000)}",
+      reserva_id: reserva_id,
+      valor: valor_total,
+      status: "pendente",
+      link_pagamento: link_pagamento,
+      dados_cliente: dados_cliente,
+      data_criacao: DateTime.utc_now() |> DateTime.to_string()
+    }
+
+    novos_pagamentos = Map.put(state.pagamentos, reserva_id, pagamento)
+
+    {:reply, {:ok, %{link_pagamento: link_pagamento, pagamento_id: pagamento.id}},
+     %{state | pagamentos: novos_pagamentos}}
+  end
+
   @impl true
   def terminate(_reason, state) do
     AMQP.Connection.close(state.conexao)

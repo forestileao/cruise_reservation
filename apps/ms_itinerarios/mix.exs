@@ -1,9 +1,9 @@
-defmodule MsPagamento.MixProject do
+defmodule MsItinerarios.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :ms_pagamento,
+      app: :ms_itinerarios,
       version: "0.1.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
@@ -19,7 +19,7 @@ defmodule MsPagamento.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {MsPagamento.Application, []}
+      mod: {MsItinerarios.Application, []}
     ]
   end
 
@@ -27,8 +27,7 @@ defmodule MsPagamento.MixProject do
   defp deps do
     [
       {:amqp, "~> 4.0"},
-      {:plug_cowboy, "~> 2.5"},
-      {:cors_plug, "~> 3.0"}
+      {:plug_cowboy, "~> 2.5"}
     ]
   end
 end

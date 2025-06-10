@@ -8,10 +8,12 @@ defmodule MsPagamento.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      {
-        MsPagamento,
-        []
-      },
+      {MsPagamento, []},
+      Plug.Cowboy.child_spec(
+        scheme: :http,
+        plug: MsPagamento.Router,
+        options: [port: 4003]  # Porta para API do MS Pagamento
+      )
     ]
 
     opts = [strategy: :one_for_one, name: MsPagamento.Supervisor]
