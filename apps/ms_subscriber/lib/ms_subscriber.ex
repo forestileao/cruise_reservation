@@ -1,5 +1,6 @@
 defmodule MsSubscriber do
   use GenServer
+  alias ElixirLS.LanguageServer.Providers.CodeAction.ReplaceWithUnderscore
   use AMQP
 
   @exchange_promocoes "promocoes"
@@ -16,6 +17,7 @@ defmodule MsSubscriber do
     GenServer.cast(__MODULE__, {:inscrever_destino, destino})
   end
 
+  @spec cancelar_inscricao(any()) :: :ok
   def cancelar_inscricao(destino) do
     GenServer.cast(__MODULE__, {:cancelar_inscricao, destino})
   end
@@ -121,11 +123,12 @@ defmodule MsSubscriber do
   end
 
   defp inscrever_em_fila(destino, state) do
-    fila = "promocoes-#{String.downcase(destino)}"
+    routing_key = "promocoes-#{String.downcase(destino)}"
+    fila = routing_key <> to_string(Enum.random(1..100))
 
     AMQP.Queue.declare(state.channel, fila)
 
-    AMQP.Queue.bind(state.channel, fila, @exchange_promocoes, routing_key: fila)
+    AMQP.Queue.bind(state.channel, fila, @exchange_promocoes, routing_key: routing_key)
 
     {:ok, _consumer_tag} = AMQP.Basic.consume(state.channel, fila, nil, no_ack: true)
 
