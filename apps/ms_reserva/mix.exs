@@ -27,7 +27,9 @@ defmodule MsReserva.MixProject do
   defp deps do
     [
       {:amqp, "~> 4.0"},
-      {:plug_cowboy, "~> 2.5"}
-    ]
+      {:plug_cowboy, "~> 2.5"},
+      {:cors_plug, "~> 3.0"},
+      {:plug, "~> 1.14"},
+      {:httpoison, "~> 2.0"}    ]
   end
 end
