@@ -21,7 +21,7 @@ defmodule MsItinerarios.Router do
     send_resp(conn, 200, "")
   end
 
-  # API para consultar itinerários disponíveis
+
   get "/itinerarios/disponiveis" do
     conn = Plug.Conn.fetch_query_params(conn)
     params = conn.query_params
@@ -37,17 +37,17 @@ defmodule MsItinerarios.Router do
     |> send_resp(200, JSON.encode!(%{itinerarios: itinerarios}))
   end
 
-  # API para verificar disponibilidade de cabines
+
   post "/itinerarios/verificar" do
     IO.puts("Requisição POST recebida em /itinerarios/verificar")
     IO.puts("Headers: #{inspect(conn.req_headers)}")
     IO.puts("Body params: #{inspect(conn.body_params)}")
 
-    # Verificar se o body foi parseado corretamente
+
     case conn.body_params do
       %Plug.Conn.Unfetched{} ->
         IO.puts("Body não foi parseado pelo Plug.Parsers, tentando ler manualmente")
-        # Se não foi parseado, tentar ler manualmente
+
         {:ok, body, conn} = Plug.Conn.read_body(conn)
         IO.puts("Body lido manualmente: #{inspect(body)}")
 
@@ -74,7 +74,7 @@ defmodule MsItinerarios.Router do
 
       params when is_map(params) ->
         IO.puts("Body parseado pelo Plug.Parsers: #{inspect(params)}")
-        # Body foi parseado pelo Plug.Parsers
+
         processar_verificacao(conn, params)
 
       _ ->

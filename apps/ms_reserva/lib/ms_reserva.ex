@@ -39,21 +39,21 @@ defmodule MsReserva do
     GenServer.call(__MODULE__, {:listar_reservas})
   end
 
-  # FUNÇÃO FALTANTE: listar_promocoes
+
   def listar_promocoes() do
     GenServer.call(__MODULE__, {:listar_promocoes})
   end
 
   @impl true
   def init(state) do
-    # Configurar RabbitMQ
+
     {:ok, conexao} = AMQP.Connection.open()
     {:ok, canal} = AMQP.Channel.open(conexao)
 
-    # Exchange para cruzeiros
+
     AMQP.Exchange.declare(canal, @exchange, :direct)
 
-    # Exchange para promoções
+
     AMQP.Exchange.declare(canal, @exchange_promocoes, :direct)
 
     AMQP.Queue.declare(canal, @queue_reserva_criada)
@@ -69,7 +69,7 @@ defmodule MsReserva do
     AMQP.Basic.consume(canal, @queue_pagamento_recusado, nil, no_ack: true)
     AMQP.Basic.consume(canal, @queue_bilhete_gerado, nil, no_ack: true)
 
-    # Consumir promoções via RabbitMQ
+
     destinos = ["Caribe", "Mediterrâneo", "Alasca", "Brasil", "Ásia"]
     for destino <- destinos do
       fila_promocao = "promocoes-#{String.downcase(destino)}-reserva"
@@ -117,7 +117,7 @@ defmodule MsReserva do
 
   @impl true
   def handle_call({:efetuar_reserva, cruzeiro_id, data_embarque, num_passageiros, num_cabines}, _from, state) do
-    # Verificar disponibilidade no MS Itinerários via REST
+
     verificacao_payload = %{
       cruzeiro_id: cruzeiro_id,
       data_embarque: data_embarque,
@@ -148,7 +148,7 @@ defmodule MsReserva do
             bilhete: nil
           }
 
-          # Solicitar link de pagamento via REST ao MS Pagamento
+
           pagamento_payload = %{
             reserva_id: reserva_id,
             valor_total: valor_total,
@@ -164,11 +164,11 @@ defmodule MsReserva do
             {:ok, %{status_code: 200, body: body}} ->
               pagamento_response = JSON.decode!(body)
 
-              # Adicionar link de pagamento à reserva
+
               nova_reserva = Map.put(nova_reserva, :link_pagamento, pagamento_response["link_pagamento"])
               novas_reservas = Map.put(state.reservas, reserva_id, nova_reserva)
 
-              # Publicar evento de reserva criada para atualizar disponibilidade
+
               mensagem = JSON.encode!(%{
                 reserva_id: reserva_id,
                 cruzeiro_id: cruzeiro_id,
@@ -183,7 +183,7 @@ defmodule MsReserva do
               {:reply, {:ok, nova_reserva}, %{state | reservas: novas_reservas}}
 
             {:error, _} ->
-              # Fallback - gerar link local
+
               link_fallback = "https://pagamento.cruzeiros.com/#{reserva_id}"
               nova_reserva = Map.put(nova_reserva, :link_pagamento, link_fallback)
               novas_reservas = Map.put(state.reservas, reserva_id, nova_reserva)
@@ -220,10 +220,10 @@ defmodule MsReserva do
     {:reply, {:ok, reservas}, state}
   end
 
-  # IMPLEMENTAÇÃO FALTANTE: handle_call para listar_promocoes
+
   @impl true
   def handle_call({:listar_promocoes}, _from, state) do
-    # Retornar promoções ativas (recebidas via RabbitMQ)
+
     promocoes_ativas =
       state.promocoes
       |> Map.values()
@@ -240,11 +240,11 @@ defmodule MsReserva do
 
       reserva ->
         if reserva.status in ["pendente", "pagamento_aprovado", "bilhete_gerado"] do
-          # Atualizar status da reserva
+
           reserva_cancelada = %{reserva | status: "cancelada"}
           novas_reservas = Map.put(state.reservas, reserva_id, reserva_cancelada)
 
-          # Publicar evento de cancelamento para liberar cabines no MS Itinerários
+
           mensagem = JSON.encode!(%{
             reserva_id: reserva_id,
             cruzeiro_id: reserva.cruzeiro_id,
@@ -269,7 +269,7 @@ defmodule MsReserva do
     {:noreply, %{state | callbacks: callbacks}}
   end
 
-  # Processar promoções recebidas via RabbitMQ
+
   def handle_info({:basic_deliver, payload, %{routing_key: routing_key}}, state) when routing_key not in [@queue_pagamento_aprovado, @queue_pagamento_recusado, @queue_bilhete_gerado, @queue_reserva_criada] do
     try do
       promocao_data = JSON.decode!(payload)
@@ -306,7 +306,7 @@ defmodule MsReserva do
     end
   end
 
-  # Handlers existentes para outros eventos
+
   def handle_info({:basic_deliver, payload, %{routing_key: @queue_pagamento_aprovado}}, state) do
     payload = JSON.decode!(payload)
     IO.puts("Mensagem de pagamento aprovado: #{inspect(payload)}")

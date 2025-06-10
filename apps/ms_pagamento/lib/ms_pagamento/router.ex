@@ -9,7 +9,7 @@ defmodule MsPagamento.Router do
     send_resp(conn, 200, "")
   end
 
-  # API para solicitar link de pagamento
+
   post "/pagamento/solicitar" do
     {:ok, body, conn} = Plug.Conn.read_body(conn)
     params = JSON.decode!(body)
@@ -51,7 +51,7 @@ defmodule MsPagamento.Router do
         "assinatura" => assinatura
       }
 
-      # Publicar na fila apropriada baseado no status
+
       fila_destino = case status do
         "aprovado" -> "pagamento-aprovado"
         "recusado" -> "pagamento-recusado"
@@ -59,7 +59,7 @@ defmodule MsPagamento.Router do
       end
 
       if fila_destino do
-        # Obter canal do GenServer
+
         canal = GenServer.call(MsPagamento, :get_canal)
         AMQP.Basic.publish(canal, "cruzeiros", fila_destino, JSON.encode!(payload))
         IO.puts("Evento #{status} publicado para reserva #{reserva_id}")

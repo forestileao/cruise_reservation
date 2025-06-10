@@ -372,13 +372,6 @@
           </div>
 
           <div class="mb-6">
-            <h2 class="text-xl font-bold mb-4">Promoções Ativas</h2>
-            <div id="promocoes-container">
-              <p class="text-gray-500">Carregando promoções...</p>
-            </div>
-          </div>
-
-          <div class="mb-6">
             <h2 class="text-xl font-bold mb-4">Histórico de Notificações</h2>
             <div
               id="historico-notificacoes"
@@ -454,7 +447,6 @@
     </div>
 
     <script>
-      // Configuração da API
       const API_BASE_URL = "http://localhost:4001";
       let currentStep = 1;
       let selectedCruzeiro = null;
@@ -464,7 +456,6 @@
       let notificationsEnabled = false;
       let currentItinerarios = [];
 
-      // Funções de navegação
       function showPage(pageId) {
         const pages = document.querySelectorAll(".page");
         pages.forEach((page) => (page.style.display = "none"));
@@ -481,7 +472,6 @@
         if (pageId === "reservas") {
           loadReservas();
         } else if (pageId === "promocoes") {
-          loadPromocoes();
           checkNotificationStatus();
         }
       }
@@ -494,7 +484,6 @@
         currentStep = step;
       }
 
-      // Função para fazer requisições à API
       async function apiRequest(endpoint, options = {}) {
         try {
           const response = await fetch(API_BASE_URL + endpoint, {
@@ -511,7 +500,6 @@
         }
       }
 
-      // Função para buscar itinerários
       async function buscarItinerarios(filtros = {}) {
         const params = new URLSearchParams();
         if (filtros.destino) params.append("destino", filtros.destino);
@@ -528,7 +516,6 @@
         return response ? response.itinerarios || [] : [];
       }
 
-      // Função para exibir itinerários
       function displayItinerarios(itinerarios, containerId) {
         const container = document.getElementById(containerId);
 
@@ -576,7 +563,6 @@
           .join("");
       }
 
-      // Função para selecionar cruzeiro
       function selecionarCruzeiro(cruzeiro_id) {
         selectedCruzeiro = cruzeiro_id;
 
@@ -607,7 +593,6 @@
         showStep(3);
       }
 
-      // Função para atualizar data de embarque
       function updateDataEmbarque() {
         const selectedDate = document.getElementById(
           "data_embarque_select"
@@ -617,7 +602,6 @@
         console.log("Data de embarque atualizada para:", selectedDate);
       }
 
-      // Função para carregar reservas
       async function loadReservas() {
         console.log("Carregando reservas...");
 
@@ -699,14 +683,12 @@
         }
       }
 
-      // Função para verificar se pode cancelar reserva
       function canCancelReserva(status) {
         return ["pendente", "pagamento_aprovado", "bilhete_gerado"].includes(
           status
         );
       }
 
-      // Função para confirmar cancelamento de reserva
       function confirmCancelReserva(reservaId) {
         showConfirmModal(
           "Cancelar Reserva",
@@ -715,7 +697,6 @@
         );
       }
 
-      // Função para cancelar reserva
       async function cancelReserva(reservaId) {
         console.log("Tentando cancelar reserva:", reservaId);
 
@@ -745,7 +726,6 @@
         closeModal();
       }
 
-      // Função para obter badge do status
       function getStatusBadge(status) {
         const badges = {
           pendente:
@@ -763,7 +743,6 @@
         );
       }
 
-      // Função para mostrar detalhes da reserva
       async function showReservaDetails(reservaId) {
         const response = await apiRequest(`/reservas/${reservaId}`);
         if (response && response.reserva) {
@@ -820,45 +799,12 @@
         }
       }
 
-      // Função para limpar filtros
       function clearFilters() {
         document.getElementById("destino").value = "";
         document.getElementById("data_embarque").value = "";
         document.getElementById("porto_embarque").value = "";
         document.getElementById("itinerarios-container").innerHTML =
           '<p class="text-gray-500">Use os filtros acima para buscar itinerários.</p>';
-      }
-
-      // Funções de Promoções e Notificações
-      async function loadPromocoes() {
-        const response = await apiRequest("/promocoes");
-        const container = document.getElementById("promocoes-container");
-
-        if (response && response.promocoes && response.promocoes.length > 0) {
-          container.innerHTML = response.promocoes
-            .map(
-              (promo) => `
-                    <div class="border p-4 rounded shadow mb-4">
-                        <h3 class="text-lg font-semibold text-green-800">${
-                          promo.titulo
-                        }</h3>
-                        <p class="text-gray-600">${promo.descricao}</p>
-                        <p class="text-sm text-gray-500">Válida até: ${
-                          promo.validade
-                        }</p>
-                        ${
-                          promo.desconto
-                            ? `<p class="text-lg font-bold text-green-600">Desconto: ${promo.desconto}%</p>`
-                            : ""
-                        }
-                    </div>
-                `
-            )
-            .join("");
-        } else {
-          container.innerHTML =
-            '<p class="text-gray-500">Nenhuma promoção ativa no momento.</p>';
-        }
       }
 
       async function checkNotificationStatus() {
@@ -915,7 +861,6 @@
         }
       }
 
-      // Funções de Server-Sent Events (SSE)
       function connectSSE() {
         if (eventSource) {
           eventSource.close();
@@ -961,25 +906,28 @@
       }
 
       function updateSSEStatus(status) {
-        const indicator = document.getElementById("sse-indicator");
-        const text = document.getElementById("sse-text");
+        checkNotificationStatus().then(() => {
+          status = notificationsEnabled ? "connected" : "disconnected";
+          const indicator = document.getElementById("sse-indicator");
+          const text = document.getElementById("sse-text");
 
-        switch (status) {
-          case "connected":
-            indicator.className =
-              "inline-block w-2 h-2 rounded-full bg-green-500 mr-2";
-            text.textContent = "Conectado às notificações";
-            break;
-          case "error":
-            indicator.className =
-              "inline-block w-2 h-2 rounded-full bg-yellow-500 mr-2";
-            text.textContent = "Erro na conexão - tentando reconectar...";
-            break;
-          default:
-            indicator.className =
-              "inline-block w-2 h-2 rounded-full bg-red-500 mr-2";
-            text.textContent = "Desconectado das notificações";
-        }
+          switch (status) {
+            case "connected":
+              indicator.className =
+                "inline-block w-2 h-2 rounded-full bg-green-500 mr-2";
+              text.textContent = "Conectado às notificações";
+              break;
+            case "error":
+              indicator.className =
+                "inline-block w-2 h-2 rounded-full bg-yellow-500 mr-2";
+              text.textContent = "Erro na conexão - tentando reconectar...";
+              break;
+            default:
+              indicator.className =
+                "inline-block w-2 h-2 rounded-full bg-red-500 mr-2";
+              text.textContent = "Desconectado das notificações";
+          }
+        });
       }
 
       function handleSSENotification(data) {
@@ -1009,13 +957,6 @@
           `${notification.titulo}: ${notification.mensagem}`,
           "info"
         );
-
-        if (
-          document.getElementById("promocoes-page").style.display !== "none"
-        ) {
-          console.log("Recarregando promoções...");
-          loadPromocoes();
-        }
       }
 
       function updateNotificationHistory() {
@@ -1045,7 +986,6 @@
           .join("");
       }
 
-      // Funções de Modal
       function showConfirmModal(title, message, onConfirm) {
         document.getElementById("modal-title").textContent = title;
         document.getElementById("modal-message").textContent = message;
@@ -1057,7 +997,6 @@
         document.getElementById("confirm-modal").style.display = "none";
       }
 
-      // Funções de Notificação Visual
       function showNotification(message, type = "info") {
         const bar = document.getElementById("notification-bar");
         const text = document.getElementById("notification-text");
@@ -1077,17 +1016,12 @@
         }
 
         bar.style.display = "block";
-
-        setTimeout(() => {
-          closeNotification();
-        }, 5000);
       }
 
       function closeNotification() {
         document.getElementById("notification-bar").style.display = "none";
       }
 
-      // Event Listeners
       document
         .getElementById("filter-form")
         .addEventListener("submit", async (e) => {
@@ -1175,7 +1109,6 @@
           }
         });
 
-      // Fechar modal com ESC
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           closeModal();
@@ -1183,7 +1116,6 @@
         }
       });
 
-      // Inicializar a aplicação
       document.addEventListener("DOMContentLoaded", () => {
         console.log("Aplicação iniciando...");
         showPage("home");
@@ -1198,7 +1130,6 @@
         updateNotificationHistory();
       });
 
-      // Limpar conexões SSE ao fechar a página
       window.addEventListener("beforeunload", () => {
         disconnectSSE();
       });

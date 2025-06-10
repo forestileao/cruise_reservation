@@ -2,7 +2,7 @@ defmodule MsReserva.Router do
   use Plug.Router
   use AMQP
 
-  # ORDEM CORRETA DOS PLUGS - CORS deve vir ANTES de match/dispatch
+
   plug CORSPlug,
     origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
@@ -11,12 +11,12 @@ defmodule MsReserva.Router do
   plug :match
   plug :dispatch
 
-  # Rota para consultar itinerários disponíveis
+
   get "/itinerarios/disponiveis" do
     conn = Plug.Conn.fetch_query_params(conn)
     params = conn.query_params
 
-    # Chama a função que consulta itinerários disponíveis
+
     {:ok, itinerarios} = MsReserva.consultar_itinerarios(params["destino"], params["data_embarque"], params["porto_embarque"])
 
     conn
@@ -95,18 +95,29 @@ defmodule MsReserva.Router do
   end
 
   get "/notificacoes/status" do
+    client_ip = get_client_ip(conn)
+    ativo = not MsReserva.BlacklistAgent.is_blacklisted?(client_ip)
+
     conn
     |> put_resp_header("content-type", "application/json")
-    |> send_resp(200, JSON.encode!(%{ativo: true}))
+    |> send_resp(200, JSON.encode!(%{ativo: ativo}))
   end
 
   post "/notificacoes/registrar" do
+    client_ip = get_client_ip(conn)
+
+    MsReserva.BlacklistAgent.remove_ip(client_ip)
+
     conn
     |> put_resp_header("content-type", "application/json")
     |> send_resp(200, JSON.encode!(%{success: true, mensagem: "Notificações ativadas"}))
   end
 
   post "/notificacoes/cancelar" do
+    client_ip = get_client_ip(conn)
+
+    MsReserva.BlacklistAgent.add_ip(client_ip)
+
     conn
     |> put_resp_header("content-type", "application/json")
     |> send_resp(200, JSON.encode!(%{success: true, mensagem: "Notificações canceladas"}))
@@ -114,6 +125,7 @@ defmodule MsReserva.Router do
 
   get "/sse/promocoes" do
     IO.puts("Nova conexão SSE solicitada")
+    client_ip = get_client_ip(conn)
 
     conn =
       conn
@@ -124,11 +136,9 @@ defmodule MsReserva.Router do
       |> put_resp_header("access-control-allow-credentials", "true")
       |> send_chunked(200)
 
-    # Registrar conexão SSE
-    MsReserva.SSEManager.add_connection(self())
+    MsReserva.SSEManager.add_connection(self(), client_ip)
 
-    # Enviar mensagem inicial
-    case chunk(conn, "data: #{JSON.encode!(%{tipo: "conectado", mensagem: "Conexão SSE estabelecida"})}\n\n") do
+    case chunk(conn, "data: #{JSON.encode!(%{tipo: "conectado", mensagem: "Notificações ativadas"})}\n\n") do
       {:ok, conn} ->
         IO.puts("Mensagem inicial SSE enviada")
         maintain_sse_connection(conn)
@@ -153,7 +163,7 @@ defmodule MsReserva.Router do
         IO.puts("Conexão SSE fechada por comando")
         :ok
     after
-      30_000 -> # Heartbeat a cada 30 segundos
+      30_000 ->
         IO.puts("Enviando heartbeat SSE")
         case chunk(conn, "data: #{JSON.encode!(%{type: "heartbeat", timestamp: DateTime.utc_now()})}\n\n") do
           {:ok, conn} -> maintain_sse_connection(conn)
@@ -164,10 +174,16 @@ defmodule MsReserva.Router do
     end
   end
 
-  # Rota para lidar com caminhos não encontrados
   match _ do
     conn
     |> put_resp_header("content-type", "application/json")
     |> send_resp(404, JSON.encode!(%{erro: "Endpoint não encontrado"}))
+  end
+
+  defp get_client_ip(conn) do
+    case get_req_header(conn, "x-forwarded-for") do
+      [ip | _] -> String.split(ip, ",") |> List.first() |> String.trim()
+      [] -> to_string(:inet.ntoa(conn.remote_ip))
+    end
   end
 end

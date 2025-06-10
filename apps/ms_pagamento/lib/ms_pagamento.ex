@@ -61,10 +61,10 @@ defmodule MsPagamento do
 
   @impl true
   def handle_call({:solicitar_link_pagamento, reserva_id, valor_total, dados_cliente}, _from, state) do
-    # Gerar link de pagamento
+
     link_pagamento = "http://localhost:4010/pay/#{reserva_id}?valor=#{valor_total}"
 
-    # Criar registro de pagamento pendente
+
     pagamento = %{
       id: "pag_#{:rand.uniform(10000)}",
       reserva_id: reserva_id,

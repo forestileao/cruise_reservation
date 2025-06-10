@@ -22,7 +22,7 @@ defmodule MsItinerarios do
 
   @impl true
   def init(state) do
-    # Dados dos itinerários com controle de cabines
+
     itinerarios = %{
       "c1" => %{
         id: "c1",
@@ -71,7 +71,7 @@ defmodule MsItinerarios do
       }
     }
 
-    # Configurar RabbitMQ
+
     {:ok, conexao} = AMQP.Connection.open()
     {:ok, canal} = AMQP.Channel.open(conexao)
 
@@ -107,7 +107,7 @@ defmodule MsItinerarios do
         match_destino and match_porto and match_data
       end)
       |> Enum.map(fn {_id, itinerario} ->
-        # Converter para formato esperado pelo frontend
+
         %{
           id: itinerario.id,
           destino: itinerario.destino,
@@ -146,7 +146,7 @@ defmodule MsItinerarios do
     end
   end
 
-  # Processar reserva criada - atualizar disponibilidade
+
   @impl true
   def handle_info({:basic_deliver, payload, %{routing_key: @queue_reserva_criada}}, state) do
     try do
@@ -167,7 +167,7 @@ defmodule MsItinerarios do
               {:noreply, state}
 
             data_info ->
-              # Atualizar cabines reservadas
+
               nova_data_info = %{data_info | cabines_reservadas: data_info.cabines_reservadas + num_cabines}
               novas_datas = Map.put(itinerario.datas_disponiveis, data_embarque, nova_data_info)
               novo_itinerario = %{itinerario | datas_disponiveis: novas_datas}
@@ -184,7 +184,7 @@ defmodule MsItinerarios do
     end
   end
 
-  # Processar reserva cancelada - liberar cabines
+
   @impl true
   def handle_info({:basic_deliver, payload, %{routing_key: @queue_reserva_cancelada}}, state) do
     try do
@@ -205,7 +205,7 @@ defmodule MsItinerarios do
               {:noreply, state}
 
             data_info ->
-              # Liberar cabines
+
               cabines_liberadas = max(0, data_info.cabines_reservadas - num_cabines)
               nova_data_info = %{data_info | cabines_reservadas: cabines_liberadas}
               novas_datas = Map.put(itinerario.datas_disponiveis, data_embarque, nova_data_info)

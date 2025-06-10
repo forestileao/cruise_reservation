@@ -1,6 +1,6 @@
 defmodule MsReserva.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
+
+
   @moduledoc false
 
   use Application
@@ -17,7 +17,8 @@ defmodule MsReserva.Application do
         plug: MsReserva.Router,
         options: [port: 4001]
       ),
-      {MsReserva.SSEManager, []}
+      {MsReserva.SSEManager, []},
+      {MsReserva.BlacklistAgent, []}
     ]
 
     opts = [strategy: :one_for_one, name: MsReserva.Supervisor]

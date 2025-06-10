@@ -1,6 +1,6 @@
 defmodule MsPagamento.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
+
+
   @moduledoc false
 
   use Application
@@ -12,7 +12,7 @@ defmodule MsPagamento.Application do
       Plug.Cowboy.child_spec(
         scheme: :http,
         plug: MsPagamento.Router,
-        options: [port: 4003]  # Porta para API do MS Pagamento
+        options: [port: 4003]
       )
     ]
 
