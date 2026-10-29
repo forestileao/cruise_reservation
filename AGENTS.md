@@ -5,7 +5,14 @@
 - Domain language in code is Portuguese: reserva, bilhete, pagamento, itinerario, assinante, promocoes. Keep these terms as they are.
 
 ## Layout
-- apps/front: Phoenix LiveView UI on port 4000 (config/dev.exs). Calls ms_reserva over HTTP with Tesla at http://localhost:4001. See apps/front/lib/front_web/reserva_live/index.ex, show.ex, new.ex and home_live.ex. LiveView routes are in apps/front/lib/front_web/router.ex.
+- apps/front: Phoenix LiveView UI on port 4000 (config/dev.exs). LiveView routes are in apps/front/lib/front_web/router.ex:
+  - live "/", HomeLive
+  - live "/reservas", ReservaLive.Index
+  - live "/reservas/nova", ReservaLive.New
+  - live "/reservas/:id", ReservaLive.Show
+  - live "/assinante", AssinanteLive
+- Reservation LiveViews (apps/front/lib/front_web/reserva_live/index.ex, show.ex, new.ex) and home_live.ex call the reservation API with an inline Tesla client. Each builds Tesla.client/1 with Tesla.Middleware.BaseUrl set to http://localhost:4001 and Tesla.Middleware.JSON. There is no shared client module.
+- apps/front/lib/front_web/assinante_live.ex is a welcome stub. It only renders a heading and a welcome paragraph and does not call MsSubscriber.
 - apps/ms_reserva: GenServer plus a Plug.Router HTTP API on port 4001 (apps/ms_reserva/lib/ms_reserva/application.ex, router.ex). Routes:
   - GET /itinerarios/disponiveis
   - POST /itinerarios/reserva
@@ -14,7 +21,7 @@
 - apps/ms_pagamento: AMQP GenServer, no HTTP endpoint.
 - apps/ms_bilhete: AMQP GenServer, no HTTP endpoint.
 - apps/ms_marketing: AMQP GenServer, no HTTP endpoint. Declares the promocoes exchange and one queue per destino, and publishes promocoes.
-- apps/ms_subscriber: AMQP GenServer, no HTTP endpoint. Consumes promocoes queues (promocoes-<destino in lowercase>) for the destinos it subscribes to and prints each promocao to stdout. It supports inscrever_destino and cancelar_inscricao.
+- apps/ms_subscriber: AMQP GenServer, no HTTP endpoint. Consumes promocoes queues (promocoes- plus String.downcase(destino)) for the destinos it subscribes to and prints each promocao to stdout. It supports inscrever_destino and cancelar_inscricao. The LiveView at /assinante is not wired to this service.
 
 ## Messaging
 - RabbitMQ through the amqp library. Services call AMQP.Connection.open() with default settings.
@@ -25,7 +32,7 @@
   - ms_bilhete consumes pagamento-aprovado and publishes bilhete-gerado.
   - ms_reserva consumes pagamento-aprovado, pagamento-recusado and bilhete-gerado.
 - ms_reserva binds its own queue pagamento-aprovado_ms_reserva to the routing key pagamento-aprovado, so it and ms_bilhete each get a copy.
-- Exchange "promocoes" (direct) is owned by ms_marketing. Queues are named promocoes-<destino in lowercase> (for example promocoes-caribe), and the routing key equals the queue name.
+- Exchange "promocoes" (direct) is owned by ms_marketing. Destinations in apps/ms_marketing/lib/ms_marketing.ex and apps/ms_subscriber/lib/ms_subscriber.ex are Caribe, Mediterrâneo, Alasca, Brasil, and Ásia. Queue names are promocoes- plus String.downcase(destino), so accents remain (for example promocoes-mediterrâneo and promocoes-ásia). The routing key equals the queue name.
 - ms_pagamento signs its messages. Consumers verify the signature. Keys are in config/config.exs under :ms_pagamento (private_key) and :ms_reserva (public_key). ms_bilhete also reads :ms_reserva public_key. Never copy key values into docs or commits.
 
 ## Setup and run
@@ -40,6 +47,8 @@
 - mix format
 - mix compile --warnings-as-errors
 - The generated tests in apps/ms_*/test still assert a hello/0 function that no longer exists, so those tests fail today.
+- apps/front/test/front_web/controllers/page_controller_test.exs expects "Peace of mind from prototype to production" on GET /, while / is HomeLive and renders "Bem-vindo ao CruzeiroMar", so that test fails today.
+- config/test.exs serves the front endpoint on port 4002.
 - The services connect to RabbitMQ when they start, so RabbitMQ must be running for mix test and iex -S mix to work.
 
 ## Conventions
