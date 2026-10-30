@@ -60,7 +60,7 @@ defmodule Front.MixProject do
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
       {:amqp, "~> 4.0"},
-      {:tesla, "~> 1.14"},
+      {:tesla, "~> 1.14"}
     ]
   end
 
