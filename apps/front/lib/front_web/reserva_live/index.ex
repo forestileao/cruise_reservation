@@ -90,7 +90,9 @@ defmodule FrontWeb.ReservaLive.Index do
                   <% end %>
                 </td>
                 <td class="py-3 px-4">
-                  <a href={"/reservas/#{reserva.id}"} class="text-brand">Detalhes</a>
+                  <a href={"/reservas/#{reserva.id}"} class="text-brand hover:text-teal-800">
+                    Detalhes
+                  </a>
                 </td>
               </tr>
             <% end %>

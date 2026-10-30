@@ -121,7 +121,7 @@ defmodule FrontWeb.HomeLive do
       </div>
 
       <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 class="text-xl font-bold text-slate-900 mb-4">Filtrar Itinerários</h2>
+        <h2 class="text-xl font-bold mb-4 text-slate-900">Filtrar Itinerários</h2>
         <form phx-change="filter">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input

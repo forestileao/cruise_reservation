@@ -31,7 +31,7 @@ defmodule FrontWeb.ReservaLive.New do
         <div>
           <%= if @step == 1 do %>
             <div class="mb-6">
-              <h2 class="text-xl font-bold text-slate-900 mb-4">Passo 1: Filtros de Itinerário</h2>
+              <h2 class="text-xl font-bold mb-4 text-slate-900">Passo 1: Filtros de Itinerário</h2>
               <form phx-submit="buscar_cruzeiros">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <input
@@ -68,7 +68,7 @@ defmodule FrontWeb.ReservaLive.New do
           <% end %>
           <%= if @step == 2 do %>
             <div class="mb-6">
-              <h2 class="text-xl font-bold text-slate-900 mb-4">Passo 2: Selecionar Itinerário</h2>
+              <h2 class="text-xl font-bold mb-4 text-slate-900">Passo 2: Selecionar Itinerário</h2>
               <div class="grid grid-cols-1 gap-6">
                 <%= for itin <- @itinerarios do %>
                   <div class="border p-4 rounded shadow">
@@ -107,7 +107,7 @@ defmodule FrontWeb.ReservaLive.New do
           <% end %>
           <%= if @step == 3 do %>
             <div class="mb-6">
-              <h2 class="text-xl font-bold text-slate-900 mb-4">Passo 3: Detalhes da Reserva</h2>
+              <h2 class="text-xl font-bold mb-4 text-slate-900">Passo 3: Detalhes da Reserva</h2>
               <form phx-submit="finalizar_reserva" method="post">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -152,7 +152,7 @@ defmodule FrontWeb.ReservaLive.New do
           <% end %>
           <%= if @step == 4 do %>
             <div class="mb-6">
-              <h2 class="text-xl font-bold text-slate-900 mb-4">Passo 4: Reserva Concluída</h2>
+              <h2 class="text-xl font-bold mb-4 text-slate-900">Passo 4: Reserva Concluída</h2>
               <div class="p-4 bg-green-100 border border-green-500 rounded">
                 <p class="text-green-700 font-bold">Sua reserva foi realizada com sucesso!</p>
                 <p>
