@@ -1,7 +1,6 @@
 defmodule FrontWeb.Router do
   use FrontWeb, :router
 
-
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
