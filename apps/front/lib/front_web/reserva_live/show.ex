@@ -15,22 +15,24 @@ defmodule FrontWeb.ReservaLive.Show do
     ~H"""
     <div class="max-w-4xl mx-auto">
       <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h1 class="text-3xl font-bold text-blue-700 mb-4">Detalhes da Reserva</h1>
+        <h1 class="text-3xl font-bold text-slate-900 mb-4">Detalhes da Reserva</h1>
 
         <%= if @reserva do %>
           <div class="p-4 bg-green-100 border border-green-500 rounded">
-            <p><strong>ID da Reserva:</strong> <%= @reserva["id"] %></p>
-            <p><strong>Status:</strong> <%= @reserva["status"] %></p>
-            <p><strong>Data de Criação:</strong> <%= @reserva["data_criacao"] %></p>
-            <p><strong>Link de pagamento:</strong> <a href={@reserva["link_pagamento"]} class="text-blue-600">Clique aqui para pagar</a></p>
-            <p><strong>Numero de Passageiros:</strong> <%= @reserva["num_passageiros"] %></p>
-            <p><strong>Numero de Cabines:</strong> <%= @reserva["num_cabines"] %></p>
-            <p><strong>Cruzeiro:</strong> <%= @reserva["cruzeiro_id"] %></p>
-            <p><strong>Valor total:</strong> <%= @reserva["valor_total"] %></p>
+            <p><strong>ID da Reserva:</strong> {@reserva["id"]}</p>
+            <p><strong>Status:</strong> {@reserva["status"]}</p>
+            <p><strong>Data de Criação:</strong> {@reserva["data_criacao"]}</p>
+            <p>
+              <strong>Link de pagamento:</strong>
+              <a href={@reserva["link_pagamento"]} class="text-brand">Clique aqui para pagar</a>
+            </p>
+            <p><strong>Numero de Passageiros:</strong> {@reserva["num_passageiros"]}</p>
+            <p><strong>Numero de Cabines:</strong> {@reserva["num_cabines"]}</p>
+            <p><strong>Cruzeiro:</strong> {@reserva["cruzeiro_id"]}</p>
+            <p><strong>Valor total:</strong> {@reserva["valor_total"]}</p>
           </div>
           <div class="p-4 bg-green-100 border border-green-500 rounded mt-4">
-
-          <pre>
+            <pre>
           Bilhete: <%= Jason.encode!(@reserva["bilhete"], pretty: true) %>
           </pre>
           </div>

@@ -7,7 +7,7 @@ defmodule FrontWeb.AssinanteLive do
 
   def render(assigns) do
     ~H"""
-    <h1>Área do Assinante</h1>
+    <h1 class="text-slate-900">Área do Assinante</h1>
     <p>Bem-vindo à área do assinante!</p>
     """
   end
