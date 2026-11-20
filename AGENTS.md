@@ -53,3 +53,5 @@
 - Commit secrets or keys.
 - Change queue or exchange names without updating every producer and consumer.
 - Add new HTTP ports without noting them here.
+
+<!-- testing comment -->
