@@ -5,16 +5,17 @@
 - Domain language in code is Portuguese: reserva, bilhete, pagamento, itinerario, assinante, promocoes. Keep these terms as they are.
 
 ## Layout
-- apps/front: Phoenix LiveView UI on port 4000 (config/dev.exs). Calls ms_reserva over HTTP with Tesla at http://localhost:4001. See apps/front/lib/front_web/reserva_live/index.ex, show.ex, new.ex and home_live.ex. LiveView routes are in apps/front/lib/front_web/router.ex.
+- apps/front: Phoenix LiveView UI on port 4000 (config/dev.exs). Calls ms_reserva over HTTP with Tesla at http://localhost:4001. See apps/front/lib/front_web/reserva_live/index.ex, show.ex, new.ex, assinante_live.ex and home_live.ex. LiveView routes are in apps/front/lib/front_web/router.ex (live "/assinante", AssinanteLive).
 - apps/ms_reserva: GenServer plus a Plug.Router HTTP API on port 4001 (apps/ms_reserva/lib/ms_reserva/application.ex, router.ex). Routes:
   - GET /itinerarios/disponiveis
   - POST /itinerarios/reserva
   - GET /reservas
   - GET /reservas/:id
+  - Public API: listar_reservas/0, registrar_callback/2 (apps/ms_reserva/lib/ms_reserva.ex)
 - apps/ms_pagamento: AMQP GenServer, no HTTP endpoint.
-- apps/ms_bilhete: AMQP GenServer, no HTTP endpoint.
-- apps/ms_marketing: AMQP GenServer, no HTTP endpoint. Declares the promocoes exchange and one queue per destino, and publishes promocoes.
-- apps/ms_subscriber: AMQP GenServer, no HTTP endpoint. Consumes promocoes queues (promocoes-<destino in lowercase>) for the destinos it subscribes to and prints each promocao to stdout. It supports inscrever_destino and cancelar_inscricao.
+- apps/ms_bilhete: AMQP GenServer, no HTTP endpoint. Supports obter_bilhete/1.
+- apps/ms_marketing: AMQP GenServer, no HTTP endpoint. Declares the promocoes exchange and one queue per destino, and publishes promocoes. Supports publicar_promocao/5 and listar_promocoes_ativas/0.
+- apps/ms_subscriber: AMQP GenServer, no HTTP endpoint. Consumes promocoes queues (promocoes-<destino in lowercase>) for the destinos it subscribes to and prints each promocao to stdout. It supports inscrever_destino, cancelar_inscricao, and listar_destinos_inscritos/0.
 
 ## Messaging
 - RabbitMQ through the amqp library. Services call AMQP.Connection.open() with default settings.
