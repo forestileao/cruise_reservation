@@ -1,4 +1,4 @@
-# CruiseReservation
+# Aurora Cruise Reservations
 
 Install and run the cruise reservation app from this repository.
 
